@@ -3,6 +3,9 @@ CabinGuard-ADI: Scientific Results Visualization
 Generates publication-quality multi-panel figures using matplotlib.
 Covers all 5 evaluation scenarios: feature timeseries, posteriors, vehicle dynamics, and MEC payload.
 """
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 import sys
 import math
 import time
@@ -29,7 +32,7 @@ C_DEGRADE = "#3498db"
 C_MRM     = "#9b59b6"
 C_BUS     = "#c0392b"
 
-OUTPUT_DIR = Path(__file__).parent / "results"
+OUTPUT_DIR = Path(__file__).resolve().parents[1] / "results"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 

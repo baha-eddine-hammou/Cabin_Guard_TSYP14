@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cabinguard"
+version = "0.2.0"
+description = "CabinGuard-ADI: in-cabin acute driver incapacitation detection prototype"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "scikit-learn>=1.4",
+    "joblib>=1.3",
+    "cryptography>=42.0",
+    "wfdb>=4.1",
+    "matplotlib>=3.8",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+hardware = ["python-can>=4.3", "cantools>=39.0", "pyserial>=3.5", "opencv-python>=4.8", "mediapipe>=0.10"]
+dev = ["pytest>=8.0"]
+
+[tool.setuptools]
+packages = ["cabinguard"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

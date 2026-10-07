@@ -5,6 +5,9 @@ simulator. This proves the training/evaluation interface and learned model
 contract; it is not clinical training or real-driver validation.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 
 import argparse
 import json
@@ -45,8 +48,8 @@ def collect_features(seeds: range) -> tuple[np.ndarray, np.ndarray]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--seeds", type=int, default=30)
-    parser.add_argument("--model-path", type=Path, default=Path("models/etiology_logreg.joblib"))
-    parser.add_argument("--metrics-path", type=Path, default=Path("results/learned_etiology_metrics.json"))
+    parser.add_argument("--model-path", type=Path, default=_Path(__file__).resolve().parents[1] / "models" / "etiology_logreg.joblib")
+    parser.add_argument("--metrics-path", type=Path, default=_Path(__file__).resolve().parents[1] / "results" / "learned_etiology_metrics.json")
     args = parser.parse_args()
     if args.seeds < 4:
         raise ValueError("--seeds must be at least 4 for a train/test seed split")

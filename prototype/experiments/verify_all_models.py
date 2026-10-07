@@ -13,6 +13,9 @@ with separate provenance tracking and ethical data boundaries.
 """
 
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 
 import sys
 import warnings
@@ -31,7 +34,7 @@ from cabinguard.learned_classifier import LearnedEtiologyClassifier
 
 
 def main() -> int:
-    models_dir = Path(__file__).resolve().parent / "models"
+    models_dir = Path(__file__).resolve().parents[1] / "models"
     print("=" * 72)
     print("  CabinGuard-ADI: Multi-Model Machine Learning Ecosystem Audit")
     print("=" * 72)

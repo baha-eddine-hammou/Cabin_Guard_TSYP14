@@ -5,6 +5,9 @@ not a clinical or vehicle certification benchmark: all sensor streams are
 synthetic and the safety response is software-only.
 """
 from __future__ import annotations
+import sys as _sys
+from pathlib import Path as _Path
+_sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
 
 import argparse
 import csv
@@ -140,7 +143,7 @@ def main() -> int:
 	parser = argparse.ArgumentParser(description=__doc__)
 	parser.add_argument("--seeds", type=int, default=10,
 						help="number of seeds per scenario (default: 10)")
-	parser.add_argument("--output-dir", type=Path, default=Path("results"))
+	parser.add_argument("--output-dir", type=Path, default=_Path(__file__).resolve().parents[1] / "results")
 	args = parser.parse_args()
 
 	rows = [
