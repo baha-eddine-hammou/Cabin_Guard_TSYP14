@@ -17,7 +17,7 @@ seat FSR, wheel grip ──────┘   (per sensor)  (bounded)  (modes,   
 | Claim | Evidence | Where |
 |---|---|---|
 | Pulse-rhythm branch separates VT/VF and ictal tachycardia from normal rhythm | 130 PhysioNet records (drivedb, szdb, vfdb, cudb, mitdb), leave-one-record-out | `prototype/results/branch_metrics.json` |
-| Motion branch detects clonic jerks against real road vibration | 32 subjects of real driving accelerometry, leave-one-subject-out; clonic motion injected after Conradsen et al. (2013), amplitude swept | `prototype/results/branch_metrics.json` |
+| Motion branch separates recorded seizure-like motion from driving and everyday activity | Trained on recorded motion only: UEA Epilepsy seizure mimics (healthy volunteers, wrist) against PhysioNet walk-climb-drive and UCI MHEALTH; held-out subjects, the Epilepsy test split (same six volunteers) and UCI HAR (never trained on). Modelled clonic jerks (Conradsen et al. 2013) are a test only | `prototype/results/motion_real.json` |
 | Fused detector: false MRM starts per hour, sensitivity, latency | Composite episodes: real cardiac and motion branches, modelled eye/head/seat channels, out-of-fold models, 22 h of real driving | `prototype/results/fusion_metrics.json` |
 | Fault and attack handling | Full software pipeline with synthetic sensors, 14 cases x 10 seeds | `prototype/results/fault_matrix.json` |
 
@@ -36,7 +36,7 @@ prototype/
   experiments/realdata/  PhysioNet extraction, branch training, fused evaluation
   experiments/fault_matrix.py   failure and attack scenarios
   experiments/colab/     auxiliary dataset scripts (MHEALTH, UCI HAR, PhysDrive, MIT-BIH)
-  models/                trained branch models (cardiac_branch, motion_branch)
+  models/                trained branch models (cardiac_branch, motion_branch; motion_branch_injected is the baseline)
   results/               every number quoted in the paper
   tests/                 pytest suite
   run_demo.py            scenarios through the full pipeline
@@ -66,14 +66,19 @@ python experiments/fault_matrix.py --seeds 10
 ## Reproduce the real-data results
 
 The datasets are downloaded from PhysioNet (official site, or its AWS open
-data mirror when the site is unreachable) into `data/`, which git ignores.
+data mirror when the site is unreachable), timeseriesclassification.com (UEA
+Epilepsy) and the UCI repository (MHEALTH, HAR) into `data/`, which git ignores.
 
 ```
 cd prototype
 python -m cabinguard.physionet_fetch drivedb szdb vfdb cudb mitdb accelerometry-walk-climb-drive
 python experiments/realdata/extract_cardiac.py      # ~2 min
 python experiments/realdata/extract_motion.py       # ~2 min
-python experiments/realdata/train_branches.py       # ~7 min; writes models/ and results/branch_metrics.json
+python experiments/realdata/extract_motion.py --bandlimited   # ~1 min; 16 Hz-bandwidth copies
+python experiments/realdata/train_branches.py       # ~7 min; cardiac branch, injected-jerk motion baseline
+python experiments/realdata/train_motion_real.py    # ~2 min; downloads UEA Epilepsy, MHEALTH, HAR (~140 MB)
+                                                    # writes models/motion_branch.joblib, results/motion_real.json
+python experiments/realdata/external_checks.py      # optional: injected-jerk baseline on the same data
 python experiments/realdata/evaluate_fusion.py      # ~3 min; writes results/fusion_metrics.json
 python experiments/fault_matrix.py --seeds 10       # ~4 min
 python experiments/export_paper_numbers.py          # refresh ../paper_numbers.tex for the paper

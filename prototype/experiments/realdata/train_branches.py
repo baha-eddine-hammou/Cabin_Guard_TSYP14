@@ -11,8 +11,10 @@ windows with injected clonic motion. Leave-one-subject-out. The headline
 false-alarm figure is computed on real driving only, with the same 2 s
 persistence the runtime watchdog applies.
 
-Writes ``results/branch_metrics.json`` and the deployable models to
-``models/cardiac_branch.joblib`` and ``models/motion_branch.joblib``.
+Writes ``results/branch_metrics.json``, the deployed cardiac model
+``models/cardiac_branch.joblib`` and ``models/motion_branch_injected.joblib``,
+the motion model trained on injected jerks, kept for comparison only. The
+deployed motion model is trained on recorded motion by ``train_motion_real.py``.
 """
 from __future__ import annotations
 
@@ -187,7 +189,7 @@ def motion(results: dict) -> None:
         if loc == "lh":
             final = models()[DEPLOYED_MOTION]().fit(X[fit_mask], y[fit_mask])
             joblib.dump({"model": final, "features": MOTION_FEATURES, "train_prior_clonic": 0.5},  # balanced weights
-                        ROOT / "models" / "motion_branch.joblib")
+                        ROOT / "models" / "motion_branch_injected.joblib")
     results["motion"] = out
 
 

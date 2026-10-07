@@ -7,14 +7,17 @@ rule already makes:
 
 * cardiac branch: real PhysioNet pulse-rhythm windows (drivedb for driving,
   vfdb/cudb/mitdb arrhythmia onsets for syncope, szdb seizures);
-* motion branch: real hip accelerometry recorded while driving; for seizure
-  episodes a clonic jerk train is added after a tonic phase;
+* motion branch: real hip accelerometry recorded while driving. Seizure
+  episodes take, after a tonic phase, either recorded seizure mimics (UEA
+  Epilepsy TEST split, never seen by the motion model) or a modelled clonic
+  jerk train added to the driving signal at a swept amplitude;
 * vision and posture branches: generated from documented models that include
   everyday confounders (blinks, glances down, leaning, one-handed steering).
 
 Every model is applied out of fold: the cardiac model never saw the record
 under test and the motion model never saw the accelerometry subjects under
-test. Decisions run every 0.5 s with the runtime rule: posterior >= Gamma for
+test (the motion model is trained on recorded motion only, as in
+``train_motion_real.py``). Decisions run every 0.5 s with the runtime rule: posterior >= Gamma for
 2 s, with evidence from at least two physical sensors.
 Writes ``results/fusion_metrics.json``.
 """
@@ -27,13 +30,14 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import train_motion_real as tmr  # noqa: E402
 from cabinguard import config  # noqa: E402
 from cabinguard.fusion import CLASSES, FusionClassifier  # noqa: E402
 from cabinguard.motion_features import clonic_waveform, motion_features  # noqa: E402
@@ -52,10 +56,6 @@ def logreg():
     return make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, class_weight="balanced"))
 
 
-def gbdt():
-    return HistGradientBoostingClassifier(max_iter=200, learning_rate=0.1, class_weight="balanced", random_state=0)
-
-
 # ---------------------------------------------------------------- models ---
 def cardiac_models(records_needed):
     d = np.load(DER / "cardiac_windows.npz")
@@ -70,21 +70,13 @@ def cardiac_models(records_needed):
     return out
 
 
-def motion_models(fold_of):
-    real = np.load(DER / "motion_real.npz")
-    inj = np.load(DER / "motion_injected.npz")
-    rm = real["location"] == "lh"
-    im = (inj["location"] == "lh") & (inj["t_end"] >= float(inj["onset_s"]) + 1.0) & (inj["amplitude"] >= 0.1)
-    Xr, sr = real["X"][rm], real["subject"][rm]
-    Xi, si = inj["X"][im], inj["subject"][im]
+def motion_models(fold_of, acc, mh, epi):
+    """Recorded-motion models (``train_motion_real.training_set``), one per fold of driving subjects."""
     out = {}
     for f in range(N_MOTION_FOLDS):
-        held = {s for s, k in fold_of.items() if k == f}
-        tr_r = ~np.isin(sr, list(held))
-        tr_i = ~np.isin(si, list(held))
-        X = np.vstack([Xr[tr_r], Xi[tr_i]])
-        y = np.concatenate([np.zeros(tr_r.sum()), np.ones(tr_i.sum())])
-        out[f] = {"model": gbdt().fit(X, y), "train_prior_clonic": 0.5}   # balanced weights
+        keep = set(np.unique(acc["subject"])) - {s for s, k in fold_of.items() if k == f}
+        out[f] = {"model": tmr.fit(*tmr.training_set(acc, mh, epi, keep, None)),
+                  "train_prior_clonic": 0.5}      # equal class weight
     return out
 
 
@@ -127,6 +119,16 @@ class DrivingMotion:
         sp0 = float(rng.uniform(0.05, 0.15))
         acc[on:] += clonic_waveform((need - on) / 100.0, 100.0, amp, sp0, math.log(1 / sp0) / 40, rng)
         return np.array([motion_features(acc[k * 50: k * 50 + 200], 100.0).vector() for k in range(n)])
+
+    def mimic_stream(self, subjects, n: int, onset_idx: int, mimics: list, rng) -> np.ndarray:
+        """Driving windows, then recorded seizure-mimic series in random order from ``onset_idx``."""
+        out = self.feature_stream(subjects, n).copy()
+        k = onset_idx
+        while k < n:
+            f = mimics[rng.integers(len(mimics))]
+            out[k:k + len(f)] = f[: n - k]
+            k += len(f)
+        return out
 
 
 # ------------------------------------------------- vision/posture model ---
@@ -271,13 +273,17 @@ def main() -> None:
             seiz.setdefault(p[0], []).append(sec)
     for r, evs in seiz.items():
         for on, off in evs:
-            for amp in AMPLITUDES_G:
-                episodes.append((f"Seizure@{amp:g}g", r, on - 120.0, int((off - on + 150.0) / STEP), int(120.0 / STEP)))
+            for amp in ("mimic",) + AMPLITUDES_G:
+                tag = amp if amp == "mimic" else f"{amp:g}g"
+                episodes.append((f"Seizure@{tag}", r, on - 120.0, int((off - on + 150.0) / STEP), int(120.0 / STEP)))
 
     needed = sorted({e[1] for e in episodes})
     print(f"{len(episodes)} episodes; training {len(needed)} cardiac folds and {N_MOTION_FOLDS} motion folds")
     cmods = cardiac_models(needed)
-    mmods = motion_models(fold_of)
+    acc, mh, epi = tmr.accelerometry(), tmr.mhealth_windows(), tmr.epilepsy_windows()
+    te = epi["TEST"]
+    mimics = [te["X"][te["series"] == s] for s in np.unique(te["series"][te["label"] == "EPILEPSY"])]
+    mmods = motion_models(fold_of, acc, mh, epi)
 
     results = {name: {"Normal": {"triggers": 0, "hours": 0.0, "by_class": {}}, "events": {}} for name in CONFIGS}
     for ei, (kind, r, t0, n, onset) in enumerate(episodes):
@@ -286,7 +292,11 @@ def main() -> None:
         f = ei % N_MOTION_FOLDS
         subj = [s for s, k in fold_of.items() if k == f]
         erng = np.random.default_rng(rng.integers(1 << 31))
-        if kind.startswith("Seizure"):
+        if kind == "Seizure@mimic":
+            tonic = int(erng.uniform(5, 15) / STEP)
+            mot = motion.mimic_stream(subj[erng.integers(len(subj)):] + subj, n, onset + tonic, mimics, erng)
+            chans = modelled_channels(n, erng, "Seizure", onset + int(erng.uniform(0, 5) / STEP))
+        elif kind.startswith("Seizure"):
             amp = float(kind.split("@")[1][:-1])
             tonic = int(erng.uniform(5, 15) / STEP)
             mot = motion.injected_stream(subj[erng.integers(len(subj))], n, onset + tonic, amp, erng)

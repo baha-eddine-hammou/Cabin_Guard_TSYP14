@@ -208,7 +208,8 @@ by a classifier whose parameters were set to match the simulator, so its
 | Question | Where the answer is | How it is produced |
 | :--- | :--- | :--- |
 | Detection accuracy, false MRM starts per hour of real driving, latency | `prototype/results/fusion_metrics.json` | `experiments/realdata/evaluate_fusion.py` on PhysioNet recordings, out-of-fold |
-| Per-branch AUC, alarms per hour, sensitivity vs seizure amplitude | `prototype/results/branch_metrics.json` | `experiments/realdata/train_branches.py` |
+| Cardiac branch AUC and recall; injected-jerk motion baseline | `prototype/results/branch_metrics.json` | `experiments/realdata/train_branches.py` |
+| Deployed motion branch (recorded motion only): alarms per hour, recorded-mimic detection, sensitivity vs modelled amplitude | `prototype/results/motion_real.json` | `experiments/realdata/train_motion_real.py` |
 | Sensor, processing, communication, tamper, replay and unauthorized-command handling | `prototype/results/fault_matrix.json` | `experiments/fault_matrix.py`, 14 cases x 10 seeds |
 | Cycle compute time against the 100 ms deadline | `fault_matrix.json` (`cycle_compute_ms`) and the `run_realtime.py` summary | measured on the development laptop; must be re-measured on the target host |
 

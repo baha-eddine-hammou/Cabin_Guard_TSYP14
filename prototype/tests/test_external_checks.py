@@ -75,7 +75,7 @@ def test_resample_to_100hz():
 
 
 def test_checks_run_end_to_end(fixtures):
-    if not (Path(ec.ROOT) / "models" / "motion_branch.joblib").exists():
+    if not (Path(ec.ROOT) / "models" / "motion_branch_injected.joblib").exists():
         pytest.skip("motion branch not trained")
     e = ec.check_epilepsy()
     assert set(e["transfer"]) == {"EPILEPSY", "RUNNING", "SAWING", "WALKING"}

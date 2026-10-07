@@ -12,11 +12,11 @@ Two products, both in ``data/derived/``:
   silent period are swept because no public recording measures clonic motion
   at a vehicle seat or headrest.
 
-With ``--bandlimited`` the same two products are written for the hip sensor
-only, after every 100 Hz series is resampled to 16 Hz and back
-(``motion_real_bl.npz``, ``motion_injected_bl.npz``). The recorded seizure
-mimics used in retraining are sampled at 16 Hz, so the 100 Hz data also enter
-training at that bandwidth and the sampling rate cannot separate the classes.
+With ``--bandlimited`` only the real windows are written, for the hip and
+wrist sensors, after every 100 Hz series is resampled to 16 Hz and back
+(``motion_real_bl.npz``). The recorded seizure mimics used in training are
+sampled at 16 Hz, so the 100 Hz data also enter training at that bandwidth and
+the sampling rate cannot separate the classes.
 """
 from __future__ import annotations
 
@@ -74,21 +74,21 @@ def subject(path: Path, seed: int, limit: bool = False):
     for code, a, b in _segments(act):
         if code not in ACTIVITIES or b - a < WIN:
             continue
-        for loc in (("lh",) if limit else LOCATIONS):
+        for loc in (("lh", "lw") if limit else LOCATIONS):
             acc = df[[f"{loc}_x", f"{loc}_y", f"{loc}_z"]].to_numpy()[a:b]
             f = _window_feats(acc, limit)
             real.append((f, ACTIVITIES[code], loc))
     inj = []
     rng = np.random.default_rng(seed)
     drive = [(a, b) for code, a, b in _segments(act) if code == 4 and b - a >= EXCERPT_S * FS]
-    if drive:
+    if drive and not limit:
         n = int(EXCERPT_S * FS)
         for k in range(EXCERPTS_PER_SUBJECT):
             a, b = drive[rng.integers(len(drive))]
             start = int(rng.integers(a, b - n + 1))
             sp0 = float(rng.uniform(0.05, 0.15))
             growth = float(np.log(1.0 / sp0) / 40.0)       # silent period reaches ~1 s after 40 jerks
-            for loc in (("lh",) if limit else ("lh", "lw")):
+            for loc in ("lh", "lw"):
                 base = df[[f"{loc}_x", f"{loc}_y", f"{loc}_z"]].to_numpy()[start:start + n]
                 for amp in AMPLITUDES_G:
                     acc = base.copy()
@@ -104,7 +104,7 @@ def subject(path: Path, seed: int, limit: bool = False):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--bandlimited", action="store_true", help="hip sensor only, at 16 Hz bandwidth")
+    ap.add_argument("--bandlimited", action="store_true", help="real hip and wrist windows at 16 Hz bandwidth")
     args = ap.parse_args()
     suffix = "_bl" if args.bandlimited else ""
     files = sorted(SRC.glob("*.csv"))
@@ -125,6 +125,9 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out / f"motion_real{suffix}.npz", X=np.concatenate(X), activity=np.array(act),
                         location=np.array(loc), subject=np.array(subj))
+    if args.bandlimited:
+        print({k: int((np.array(act) == k).sum()) for k in np.unique(act)})
+        return
     IX, it, iamp, isp, iloc, isubj, iep = [], [], [], [], [], [], []
     for sid, _, inj in results:
         for f, t_end, amp, sp0, l, k in inj:
@@ -135,7 +138,7 @@ def main() -> None:
             iloc += [l] * len(f)
             isubj += [sid] * len(f)
             iep += [f"{sid}/{l}/{k}/{amp}"] * len(f)
-    np.savez_compressed(out / f"motion_injected{suffix}.npz", X=np.concatenate(IX), t_end=np.concatenate(it),
+    np.savez_compressed(out / "motion_injected.npz", X=np.concatenate(IX), t_end=np.concatenate(it),
                         amplitude=np.array(iamp), sp0=np.array(isp), location=np.array(iloc),
                         subject=np.array(isubj), episode=np.array(iep), onset_s=ONSET_S)
     a = np.array(act)

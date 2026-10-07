@@ -4,8 +4,8 @@
     "transfer": {
       "EPILEPSY": {
         "series": 34,
-        "fired": 3,
-        "rate": 0.08823529411764706
+        "fired": 2,
+        "rate": 0.058823529411764705
       },
       "RUNNING": {
         "series": 37,
@@ -19,8 +19,8 @@
       },
       "WALKING": {
         "series": 37,
-        "fired": 1,
-        "rate": 0.02702702702702703
+        "fired": 0,
+        "rate": 0.0
       }
     },
     "within_dataset": {
@@ -58,7 +58,7 @@
       },
       "sitting": {
         "windows": 1190,
-        "confident": 0,
+        "confident": 2,
         "alarms": 0,
         "hours": 0.17066666666666672
       },
@@ -70,8 +70,8 @@
       },
       "walking": {
         "windows": 1190,
-        "confident": 145,
-        "alarms": 4,
+        "confident": 142,
+        "alarms": 3,
         "hours": 0.17066666666666672
       },
       "waist bends": {
@@ -82,19 +82,19 @@
       },
       "arm elevation": {
         "windows": 1142,
-        "confident": 20,
+        "confident": 21,
         "alarms": 0,
         "hours": 0.16356111111111113
       },
       "knee bends": {
         "windows": 1139,
-        "confident": 6,
+        "confident": 4,
         "alarms": 0,
         "hours": 0.1629833333333333
       },
       "cycling": {
         "windows": 1190,
-        "confident": 718,
+        "confident": 741,
         "alarms": 10,
         "hours": 0.17066666666666672
       },
@@ -118,7 +118,7 @@
       },
       "climbing stairs": {
         "windows": 1170,
-        "confident": 6,
+        "confident": 7,
         "alarms": 0,
         "hours": 0.17066666666666674
       }
@@ -129,18 +129,18 @@
     "by_activity": {
       "standing": {
         "windows": 1906,
-        "confident": 16,
-        "window_rate": 0.008394543546694649
+        "confident": 15,
+        "window_rate": 0.007869884575026232
       },
       "sitting": {
         "windows": 1777,
-        "confident": 2,
-        "window_rate": 0.0011254924029262803
+        "confident": 3,
+        "window_rate": 0.0016882386043894203
       },
       "lying": {
         "windows": 1944,
-        "confident": 7,
-        "window_rate": 0.00360082304526749
+        "confident": 8,
+        "window_rate": 0.00411522633744856
       },
       "walking": {
         "windows": 1722,
@@ -154,8 +154,8 @@
       },
       "upstairs": {
         "windows": 1544,
-        "confident": 5,
-        "window_rate": 0.003238341968911917
+        "confident": 6,
+        "window_rate": 0.0038860103626943004
       }
     }
   }
