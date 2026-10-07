@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.9)  1 OCT 2026 14:50
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (MiKTeX 25.12) (preloaded format=pdflatex 2026.9.9)  7 OCT 2026 10:32
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -804,10 +804,6 @@ Underfull \hbox (badness 1776) in paragraph at lines 361--362
  []
 
 [4]
-Underfull \hbox (badness 5260) in paragraph at lines 368--369
-\OT1/ptm/m/n/10 latency dis-tri-bu-tions and false-positive/false-negative
- []
-
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -826,10 +822,10 @@ L3 programming layer <2025-12-24>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 17117 strings out of 467871
- 363556 string characters out of 5419829
- 798689 words of memory out of 5000000
- 45671 multiletter control sequences out of 15000+600000
+ 17118 strings out of 467871
+ 363570 string characters out of 5419829
+ 800711 words of memory out of 5000000
+ 45672 multiletter control sequences out of 15000+600000
  675936 words of font info for 132 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  84i,14n,94p,2118b,754s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -859,7 +855,7 @@ s/utmb8a.pfb><C:/Users/MI/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/u
 tmbi8a.pfb><C:/Users/MI/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utm
 r8a.pfb><C:/Users/MI/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8
 a.pfb>
-Output written on IEEE_Research_Paper_CabinGuard.pdf (5 pages, 309772 bytes).
+Output written on IEEE_Research_Paper_CabinGuard.pdf (5 pages, 310855 bytes).
 PDF statistics:
  142 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)

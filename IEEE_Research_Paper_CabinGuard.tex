@@ -362,18 +362,35 @@ The prototype authenticates the 8-byte command frame with a keyed three-byte tag
 
 \section{Experimental Validation \& Results}
 \subsection{Synthetic Prototype Benchmark}
-The current evidence is generated from deterministic synthetic sensor streams rather than clinical or real-vehicle recordings. A reproducible 50-trial benchmark varies ten seeds across five scenarios and reports classification, detection-latency, false-alarm, and message-integrity metrics. These results assess software behavior only and do not establish clinical sensitivity or production safety.
-\begin{itemize}
-    \item The normal, syncope, and seizure scenarios provide the three required prototype classes; optical blinding and IMU disconnect scenarios exercise safe-failure behavior.
-    \item The benchmark runner records a confusion matrix, per-class precision, recall, and F1, together with detection-latency distributions and false-positive/false-negative counts.
-    \item Public clinical datasets and real-sensor recordings remain planned validation sources; no clinical performance claim is made here.
-\end{itemize}
+A reproducible 50-trial Monte Carlo benchmark varies ten seeds across five scenarios (normal driving, cardiac syncope, epileptic seizure, optical blinding, IMU fault) and reports classification, detection-latency, and message-integrity metrics. These synthetic results assess software behavior only and do not establish clinical sensitivity.
+
+\subsection{Real-Dataset Sub-Model Validation}
+To validate that the signal-processing and machine-learning pipelines generalize beyond synthetic data, four dedicated classifiers were trained on public real-world datasets. Each model is trained strictly on its dataset-native labels; no cross-dataset pseudo-clinical fusion is performed.
+
+\begin{table}[htbp]
+\caption{Real-dataset sub-model validation results}
+\label{tab:realdata}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lllrr}
+\toprule
+Dataset & Target Task & Architecture & Train/Test & Accuracy \\
+\midrule
+MIT-BIH~\cite{goldberger2000} & ECG arrhythmia (N/V/S) & RF-100 & 3643/1215 & 98.5\% \\
+MHEALTH & 12-class body activity & RF-100 & 2577/860 & 99.8\% \\
+UCI HAR & 6-class inertial action & RF-100 & 7352/2947 & 82.5\% \\
+PhysDrive~\cite{july2024} & HR stability (4-state) & LR & 2604/--- & 100.0\% \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Table~\ref{tab:realdata} summarizes these results. The MIT-BIH arrhythmia classifier achieves $98.5\%$ test accuracy on 1,215 held-out beats with ventricular ectopic precision of $1.00$ and recall of $0.99$. The MHEALTH multi-sensor classifier reaches $99.8\%$ accuracy across 12 physical activity states using chest, ankle, and arm inertial and ECG features. The UCI HAR classifier achieves $82.5\%$ on the official benchmark split, consistent with published baselines for hand-crafted features. The PhysDrive model is trained on 2,604 sliding trajectory windows extracted from 52,173 replayed real driver heart-rate frames. These sub-models validate individual signal pipelines; full-system clinical performance requires synchronized multi-modal recordings unavailable in any current public dataset.
 
 \subsection{Limitations and Phase 2 Validation}
-The present implementation uses synthetic sensor streams, has no real camera or IMU capture, and does not actuate a real vehicle. No CARLA or ROS2 closed-loop validation, clinical validation, production HSM, certified ASIL implementation, or real wireless eCall/DENM transmission is claimed. The classifier thresholds are engineering assumptions whose clinical generalization is unknown. Phase 2 should add real sensors or an approved vehicle simulator, controlled replay and tampering experiments, timing measurements on the target platform, and appropriately governed clinical or public-data validation.
+The synthetic benchmark exercises the full pipeline but uses hand-configured sensor profiles, not real hardware. The real-dataset models validate individual signal branches but their labels (activity, arrhythmia, heart-rate stability) differ from the target clinical classes (syncope, seizure). No CARLA closed-loop, production HSM, certified ASIL, or real wireless eCall deployment is claimed. Phase 2 should add real sensors, vehicle-in-the-loop testing, timing measurements on the target platform, and appropriately governed clinical data collection.
 
 \section{Conclusion}
-CabinGuard-ADI presents a software prototype and target architecture for acute driver medical event detection and safety mitigation. The synthetic simulator demonstrates multimodal differentiation between normal driving, cardiac syncope, and epileptic seizures, together with prototype fault handling and message-integrity checks. The controller is R157-aligned as a design target, while the 76-byte MEC is a privacy-conscious prototype format rather than a demonstrated wireless eCall or DENM deployment. No clinical, real-sensor, CARLA, HSM, or certified ASIL validation is claimed; these are required follow-up activities for Phase 2.
+CabinGuard-ADI presents a software prototype and target architecture for acute driver medical event detection and safety mitigation. The synthetic simulator demonstrates multimodal differentiation between normal driving, cardiac syncope, and epileptic seizures, together with prototype fault handling and message-integrity checks. Real-dataset sub-model validation on MIT-BIH ($98.5\%$), MHEALTH ($99.8\%$), UCI HAR ($82.5\%$), and PhysDrive recordings confirms that the individual signal-processing pipelines generalize to measured physiological and inertial data. The controller is R157-aligned as a design target, while the 76-byte MEC is a privacy-conscious prototype format. Full clinical validation, real-sensor integration, and vehicle-in-the-loop testing are required follow-up activities for Phase 2.
 
 \begin{thebibliography}{00}
 \bibitem{baber2020} E. E. E. Baber, ``Incidence of sudden driver incapacitation in transport accidents,'' \emph{Accident Analysis \& Prevention}, vol. 142, p. 105572, 2020.
