@@ -1,0 +1,81 @@
+{
+  "dataset": "PhysioNet MIT-BIH Arrhythmia Database",
+  "records_evaluated": [
+    "100",
+    "200"
+  ],
+  "total_windows": 360,
+  "total_beats_extracted": 4858,
+  "raw_symbols_observed": {
+    "N": 3966,
+    "A": 63,
+    "V": 827,
+    "F": 2
+  },
+  "beat_class_distribution": {
+    "Normal_N": 3966,
+    "Other_Supraventricular": 65,
+    "Ventricular_V": 827
+  },
+  "train_samples": 3643,
+  "test_samples": 1215,
+  "model_architecture": "StandardScaler + RandomForest (100 estimators, max_depth=12)",
+  "test_accuracy": 0.9852,
+  "labels": [
+    "Normal_N",
+    "Other_Supraventricular",
+    "Ventricular_V"
+  ],
+  "confusion_matrix": [
+    [
+      992,
+      0,
+      0
+    ],
+    [
+      16,
+      0,
+      0
+    ],
+    [
+      2,
+      0,
+      205
+    ]
+  ],
+  "classification_report": {
+    "Normal_N": {
+      "precision": 0.9821782178217822,
+      "recall": 1.0,
+      "f1-score": 0.991008991008991,
+      "support": 992.0
+    },
+    "Other_Supraventricular": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1-score": 0.0,
+      "support": 16.0
+    },
+    "Ventricular_V": {
+      "precision": 1.0,
+      "recall": 0.9903381642512077,
+      "f1-score": 0.9951456310679612,
+      "support": 207.0
+    },
+    "accuracy": 0.9851851851851852,
+    "macro avg": {
+      "precision": 0.6607260726072607,
+      "recall": 0.6634460547504025,
+      "f1-score": 0.6620515406923174,
+      "support": 1215.0
+    },
+    "weighted avg": {
+      "precision": 0.97228048730799,
+      "recall": 0.9851851851851852,
+      "f1-score": 0.9786634277464914,
+      "support": 1215.0
+    }
+  },
+  "saved_model_path": "C:\\Work\\IEEE\\VTS\\TSYP14\\mitbih_arrhythmia_model.joblib",
+  "scope": "real ECG beat morphology and arrhythmia classification; not syncope or driver crisis"
+}

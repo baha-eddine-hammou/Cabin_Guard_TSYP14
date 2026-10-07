@@ -1,0 +1,400 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% Packages
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{shapes,arrows.meta,positioning,calc}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{CabinGuard-ADI: A Multimodal Edge-AI Framework for In-Cabin Driver Acute Medical Event Differentiation, Minimum Risk Maneuvering, and Privacy-Preserving V2X Telematics\\
+\thanks{This technical paper is submitted for the IEEE VTS CABINGUARD-ADI Technical Challenge (Phase 1). Supported by IEEE VTS and IEEE EMBS Student Branch Chapters.}
+}
+
+\author{\IEEEauthorblockN{Student Branch Team}
+\IEEEauthorblockA{\textit{Department of Electrical and Computer Engineering} \\
+\textit{IEEE Student Branch}\\
+Email: studentbranch@ieee.org}
+}
+
+\maketitle
+
+\begin{abstract}
+Driver Monitoring Systems (DMS) in modern passenger vehicles focus predominantly on transient cognitive distraction and progressive fatigue, relying on eye-gaze tracking and head-pose heuristics. However, acute driver incapacitation triggered by sudden medical emergencies, most notably cardiac syncope and epileptic seizures, exhibits severe kinematic consequences requiring immediate intervention within seconds. Existing automotive architectures lack the multimodal sensory breadth to differentiate between distinct clinical pathologies and lack standardized, privacy-preserving mechanisms to execute an autonomous Minimum Risk Maneuver (MRM) while alerting emergency medical services (EMS). In this paper, we present CabinGuard-ADI as a prototype and target-architecture framework for in-cabin medical incapacitation detection, clinical multi-etiology differentiation, and fail-safe vehicle response. CabinGuard-ADI uses a zero-wearable sensor suite combining near-infrared facial computer vision, a seat headrest-integrated tri-axial accelerometer tuned to pathological $2\text{--}6$\,Hz clonic tremors, seatback force-sensing resistors, and capacitive steering wheel grip sensors. A dual-branch edge-AI inference engine processes multimodal signals locally to differentiate between Normal Driving, Cardiac Syncope, and Epileptic Seizures with quantified predictive uncertainty. Upon verified incapacitation, a deterministic safety controller proposes a UNECE R157-aligned MRM trajectory intended to bring the vehicle to a controlled standstill out of the active traffic lane. Concurrently, the prototype synthesizes a 76-byte Medical Extension Container (MEC) over a V2X-style telematics format to illustrate privacy-conscious emergency data packaging. The implementation is a software research prototype, not a safety-certified production system or a demonstrated wireless eCall/DENM deployment. We evaluate it with synthetic multimodal scenarios and report the scope and limitations of that evidence.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Driver Monitoring Systems, Acute Medical Emergencies, Sensor Fusion, Remote Photoplethysmography (rPPG), Epileptic Seizures, Cardiac Syncope, Minimum Risk Maneuver (MRM), UNECE R157, V2X, Next-Generation eCall, Automotive Cybersecurity.
+\end{IEEEkeywords}
+
+\section{Introduction \& Clinical Motivation}
+Modern passenger vehicles are increasingly equipped with Advanced Driver Assistance Systems (ADAS) and Level 2+ Automated Driving Systems (ADS) that monitor environmental hazards and enforce lane centering. Concurrently, regulatory frameworks such as the European General Safety Regulation (GSR) and Euro NCAP 2026 protocols mandate Driver Monitoring Systems (DMS) to mitigate distraction, mobile phone usage, and microsleep.
+
+However, an epidemiological reality remains unaddressed: acute driver incapacitation caused by spontaneous medical catastrophes. Medical conditions including cardiac arrhythmias, vasovagal syncope, acute coronary syndromes, ischemic strokes, and epileptic seizures cause thousands of severe, multi-vehicle collisions annually~\cite{baber2020}. Unlike fatigue, which develops progressively over tens of minutes with identifiable behavioral precursors such as frequent yawning, eyelid droop, and lane weaving, medical crises often produce abrupt, complete loss of motor control and consciousness within 2 to 6 seconds~\cite{martinez2024}.
+
+A driver experiencing a convulsive epileptic seizure undergoes uncontrollable tonic muscle contraction followed by clonic, rhythmic motor spasms, frequently locking the limbs against the steering wheel or accelerator pedal~\cite{fisher2014}. Conversely, a driver suffering cardiac syncope undergoes sudden cerebral hypoperfusion, resulting in flaccid loss of postural tone, closed eyes, head droop, and immediate hand release from the controls~\cite{shenthar2023}.
+
+Existing automotive DMS suffer from five fundamental limitations when confronted with acute medical emergencies:
+\begin{enumerate}
+    \item Commercial DMS cluster all non-attentive states into a single non-responsive category, depriving emergency medical services of clinical etiology data.
+    \item Vision-only DMS fail under direct sunlight, darkness, occlusions, and optical blinding attacks~\cite{rao2023}.
+    \item Wearable biometric sensors impose an unacceptable compliance burden on passenger vehicle occupants, exhibiting compliance rates below $35\%$~\cite{gupta2024}.
+    \item Sudden uncoordinated deceleration creates severe secondary rear-end collision hazards on high-speed roadways, motivating alignment with ISO 26262, ISO 21448, and UNECE Regulation No. 157~\cite{unece157}; this prototype is not certified to those standards.
+    \item Raw biometric data requires privacy protection, while unauthenticated in-vehicle networks remain susceptible to malicious CAN injection~\cite{wolf2025}; the prototype demonstrates data minimization and message-integrity concepts rather than legal compliance.
+\end{enumerate}
+
+To resolve these limitations, this paper presents CabinGuard-ADI, an end to end framework delivering five primary contributions:
+\begin{itemize}
+    \item A zero wearable burden multimodal sensor suite combining near-infrared computer vision, contactless remote photoplethysmography, headrest-embedded accelerometry, seatback pressure sensing, and capacitive steering wheel grip.
+    \item A clinical multi-etiology differentiation model exploiting the physiological contrast between hyper-motor clonic resonance ($2\text{--}6$\,Hz) and hypo-motor postural collapse to classify Normal Driving, Cardiac Syncope, and Epileptic Seizures.
+    \item A deterministic safety controller proposing a UNECE R157-aligned Minimum Risk Maneuver with a controlled deceleration target of $-3.2\text{ m/s}^2$.
+    \item A privacy-conscious 76-byte Medical Extension Container prototype for future telematics integration, without claiming real ETSI ITS-G5, NG-eCall, IEEE 1609.2, or wireless deployment.
+    \item A cross-sensor plausibility matrix enforcing fail-safe degraded modes and anti-spoofing interlocks against optical and bus injection attacks.
+\end{itemize}
+
+\section{Related Work \& State of the Art}
+\subsection{Contactless Physiological Sensing in Automotive Cabins}
+Extracting cardiac vitals without physical attachments relies primarily on remote photoplethysmography (rPPG) and Frequency-Modulated Continuous-Wave (FMCW) radar. rPPG measures subtle diffuse reflectance variations resulting from arterial blood pulse volume changes under ambient or active lighting~\cite{rao2023}. Benchmarking platforms such as rPPG-Toolbox~\cite{liu2023} evaluate unsupervised formulations such as Plane-Orthogonal-to-Skin~\cite{wang2017pos} and neural networks. Datasets including PhysDrive~\cite{july2024} and MMDrive~\cite{chen2025} demonstrate that in-vehicle optical rPPG suffers signal degradation ($\text{SNR} < -10\text{ dB}$) during illumination transitions. While FMCW radar provides robust vital estimation~\cite{rao2023}, automotive-grade radar modules present prohibitive costs for mass deployment. CabinGuard-ADI addresses this by coupling optical rPPG with seatback force sensors and headrest accelerometry.
+
+\subsection{Seizure and Convulsion Recognition}
+Clinical seizure detection predominantly utilizes electroencephalography and wearable inertial measurement units~\cite{vandecasteele2023}. Established algorithms apply convolutional architectures to isolate the $2\text{ to }6\text{ Hz}$ clonic impulse band characteristic of motor seizures~\cite{ramgopal2024}. Vision models such as VSViG~\cite{xu2024} track skeleton dynamics in clinical units. However, prior investigations have not addressed sensor placement in vehicle headrests to isolate driver cranial spasms from vehicle chassis vibrations.
+
+\subsection{Vehicle Safety Regulations and Minimum Risk Maneuvers}
+Driver incapacitation motivates an ISO 26262 and ISO 21448 safety analysis, while UNECE Regulation No. 157 provides a reference for MRM behavior~\cite{unece157}. The prototype uses a 10 Hz deterministic state machine with a $-3.2\text{ m/s}^2$ deceleration target and treats the regulatory values as design targets requiring vehicle-level validation, not as achieved certification.
+
+\section{Proposed System Architecture}
+The CabinGuard-ADI target architecture uses an edge processor interfaced with vehicle chassis actuators via CAN-FD and future emergency services via standard V2X wireless protocols. The current implementation exercises these interfaces in software and does not connect to real vehicle actuators or wireless services.
+
+\subsection{Low-Cost Sensor Suite}
+The sensing layer integrates four non-intrusive modalities:
+\begin{enumerate}
+    \item A wide-angle near-infrared optical sensor ($60$\,FPS, $1080$p) illuminated by active $850\text{ nm}$ LEDs mounted on the steering column console.
+    \item An MPU6050 six-axis inertial measurement unit sampled at $100\text{ Hz}$ embedded inside the driver headrest cushioning to isolate upper-body tremors from road surface rumble.
+    \item A seatback force-sensing resistor matrix measuring continuous contact pressure along the thoracic backrest to detect torso collapse.
+    \item A dual-zone capacitive touch interface integrated beneath the steering wheel rim to measure manual grip status independently of steering torque.
+\end{enumerate}
+
+Figure~\ref{fig:hardware} depicts the physical wiring topology connecting the in-cabin sensors to the edge computing host and vehicle chassis buses. The near-infrared camera streams raw frames over USB 3.0 directly to the edge graphics processor. The headrest accelerometer, seatback force sensor, and steering grip electrodes are aggregated by an ESP32 microcontroller node over I2C, analog-to-digital, and touch channels, delivering a unified serial telemetry stream to the edge host. Commands are transmitted to chassis actuators over an isolated CAN-FD bus via an MCP2515 transceiver.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    box/.style={rectangle, draw=black, fill=white, thick, minimum width=2.0cm, minimum height=0.65cm, align=center, font=\scriptsize},
+    edgebox/.style={rectangle, draw=blue!80, fill=blue!5, thick, minimum width=2.5cm, minimum height=2.6cm, align=center, font=\scriptsize},
+    actbox/.style={rectangle, draw=red!80, fill=red!5, thick, minimum width=2.1cm, minimum height=0.55cm, align=center, font=\scriptsize},
+    arr/.style={-{Stealth[scale=0.85]}, thick},
+    busarr/.style={-{Stealth[scale=0.85]}, thick, draw=red!70!black}
+]
+    % In-Cabin Sensors (x = 1.0)
+    \node[box] (cam) at (1.0, 3.20) {NIR Camera\\{\tiny $60$\,FPS, USB 3.0}};
+    \node[box] (imu) at (1.0, 2.15) {Headrest IMU\\{\tiny MPU6050, I2C}};
+    \node[box] (fsr) at (1.0, 1.10) {Seatback FSR\\{\tiny Thoracic, ADC}};
+    \node[box] (grp) at (1.0, 0.05) {Steering Grip\\{\tiny Capacitive Touch}};
+
+    % Microcontroller Gateway (x = 4.3)
+    \node[box, fill=gray!10, minimum width=1.8cm, minimum height=1.8cm] (esp) at (4.3, 1.10) {Microcontroller\\Gateway\\{\tiny (ESP32)}};
+
+    % Edge AI Host Controller (x = 8.1)
+    \node[edgebox] (jet) at (8.1, 1.60) {\textbf{Edge AI Host}\\{\tiny (Jetson / ECU)}\\[3pt]{\tiny Multimodal AI}\\{\tiny Watchdog (Alg.~1)}\\{\tiny UNECE R157 MRM}};
+
+    % Actuators & Telematics (x = 12.1)
+    \node[actbox] (ebs) at (12.1, 2.70) {Braking (EBS)\\{\tiny $-3.2\text{ m/s}^2$ Decel}};
+    \node[actbox] (eps) at (12.1, 1.80) {Steering (EPS)\\{\tiny Shoulder Pull}};
+    \node[actbox] (haz) at (12.1, 0.90) {Hazards \& Locks\\{\tiny Flashers, Unlock}};
+    \node[actbox, draw=blue!80, fill=blue!5] (v2x) at (12.1, 0.00) {V2X Telematics\\{\tiny DENM / eCall}};
+
+    % Sensor to Gateway Connections
+    \draw[arr] (imu.east) -- ++(0.5, 0) |- node[above, pos=0.75, font=\tiny, fill=white, inner sep=1pt] {I2C} ([yshift=14pt]esp.west);
+    \draw[arr] (fsr.east) -- node[above, midway, font=\tiny, fill=white, inner sep=1pt] {ADC} (esp.west);
+    \draw[arr] (grp.east) -- ++(0.5, 0) |- node[below, pos=0.75, font=\tiny, fill=white, inner sep=1pt] {Touch} ([yshift=-14pt]esp.west);
+
+    % Camera Direct to Edge Host
+    \draw[arr, draw=blue!75!black] (cam.east) -- node[above, midway, font=\tiny, text=blue!75!black] {USB 3.0 UVC Video} (6.3, 3.20) |- ([yshift=24pt]jet.west);
+
+    % Gateway to Edge Host
+    \draw[arr] (esp.east) -- node[above, midway, font=\tiny, fill=white, inner sep=1pt] {USB Serial} (jet.west |- esp.east);
+
+    % CAN-FD Bus Trunk
+    \draw[line width=2.4pt, draw=red!70!black] (10.3, 0.75) -- (10.3, 2.85);
+    \node[above, font=\tiny\bfseries, text=red!70!black] at (10.3, 2.95) {CAN-FD Bus};
+
+    % Host to CAN-FD Trunk
+    \draw[busarr] (jet.east |- 0, 1.80) -- node[above, midway, font=\tiny, text=red!70!black] {MCP2515} (10.3, 1.80);
+
+    % Bus Trunk to Actuators
+    \draw[busarr] (10.3, 2.70) -- (ebs.west);
+    \draw[busarr] (10.3, 1.80) -- (eps.west);
+    \draw[busarr] (10.3, 0.90) -- (haz.west);
+
+    % Host to V2X Telematics
+    \draw[arr, draw=blue!75!black] (jet.east |- 0, 0.40) -- (9.8, 0.40) |- node[above, pos=0.78, font=\tiny, text=blue!75!black, fill=white, inner sep=1pt] {Ethernet / SPI} (v2x.west);
+\end{tikzpicture}%
+}
+\caption{In-cabin hardware wiring and system bus topology}
+\label{fig:hardware}
+\end{figure}
+
+\section{Detection \& Multi-Etiology AI Methodology}
+\subsection{Mathematical Feature Extraction}
+\subsubsection{Ocular and Cranial Kinematics}
+Eyelid boundary coordinates are tracked from 468 three-dimensional facial landmarks. Eye openness is computed using the Eye Aspect Ratio proposed by Soukupov{\'a} and {\v{C}}ech~\cite{soukupova2016}:
+\begin{equation}
+\label{eq:ear}
+EAR = \frac{\|p_2 - p_6\|_2 + \|p_3 - p_5\|_2}{2 \|p_1 - p_4\|_2}
+\end{equation}
+In Equation~\eqref{eq:ear}, vectors $p_1, \dots, p_6$ represent the two-dimensional pixel locations of the canonical eyelid landmarks, and $\|\cdot\|_2$ denotes the Euclidean norm. An $EAR < 0.15$ persisting for longer than $2.0\text{ s}$ denotes sustained involuntary eye closure. Head pitch angle $\theta_{\text{pitch}}$ is resolved via Perspective-n-Point estimation against a canonical facial geometry, where $\theta_{\text{pitch}} < -25^\circ$ indicates forward cranial droop.
+
+\subsubsection{Contactless Hemodynamic Extraction}
+Spatial pixel averaging across a forehead region of interest yields time-series color signals $[R(t), G(t), B(t)]^T$. We apply the Plane-Orthogonal-to-Skin algorithm developed by Wang et al.~\cite{wang2017pos}:
+\begin{equation}
+\label{eq:pos}
+S(t) = \mathbf{P} \cdot C_n(t)
+\end{equation}
+In Equation~\eqref{eq:pos}, vector $C_n(t)$ contains the mean-normalized color channels $[R(t)/\mu_R - 1, G(t)/\mu_G - 1, B(t)/\mu_B - 1]^T$, and $\mathbf{P}$ represents the projection matrix defined by:
+\begin{equation}
+\label{eq:pos_matrix}
+\mathbf{P} = \begin{bmatrix} 0 & 1 & -1 \\ -2 & 1 & 1 \end{bmatrix}
+\end{equation}
+In Equation~\eqref{eq:pos_matrix}, matrix $\mathbf{P}$ projects normalized color signals onto a plane orthogonal to the physiological skin tone vector. The resultant signal $S(t)$ is filtered with a fourth-order zero-phase Butterworth bandpass filter spanning $0.7\text{--}3.5\text{ Hz}$, corresponding to $42\text{--}210\text{ BPM}$. Fast Fourier Transform peak analysis yields cardiac rate $HR_{rPPG}$.
+
+\subsubsection{Inertial Seizure Spectral Energy Ratio}
+Orthogonal acceleration channels $a_x(t), a_y(t), a_z(t)$ from the headrest sensor are converted into linear magnitude:
+\begin{equation}
+\label{eq:acc_mag}
+m_a(t) = \sqrt{a_x(t)^2 + a_y(t)^2 + a_z(t)^2} - g
+\end{equation}
+In Equation~\eqref{eq:acc_mag}, $g$ represents the gravitational acceleration constant ($9.81\text{ m/s}^2$). The signal $m_a(t)$ is segmented into two-second windows with 75\% overlap. Power spectral density $P_{aa}(f)$ is computed via Welch's periodogram~\cite{welch1967}. The Seizure Spectral Energy Ratio is defined as:
+\begin{equation}
+\label{eq:ser}
+SER_{2-6\text{Hz}} = \frac{\int_{2.0}^{6.0} P_{aa}(f) \, df}{\int_{0.5}^{20.0} P_{aa}(f) \, df}
+\end{equation}
+In Equation~\eqref{eq:ser}, $P_{aa}(f)$ represents the acceleration power spectral density at frequency $f$. Motor clonic contractions produce a concentrated resonance peak between $2.0\text{ Hz}$ and $6.0\text{ Hz}$ ($SER_{2-6\text{Hz}} > 0.65$), whereas chassis vibration produces broad low-frequency dispersion ($SER_{2-6\text{Hz}} < 0.20$).
+
+\subsubsection{Postural Slump Index}
+Normalized seatback force readings $P_{back}(t) \in [0, 1]$ are mapped to a Postural Slump Index:
+\begin{equation}
+\label{eq:psi}
+PSI(t) = 1.0 - \frac{1}{\tau} \int_{t-\tau}^{t} P_{back}(\tau') \, d\tau'
+\end{equation}
+In Equation~\eqref{eq:psi}, $P_{back}(\tau')$ denotes the instantaneous normalized seatback contact pressure, and $\tau = 1.0\text{ s}$ represents the integration time constant. Atonic muscular collapse causes torso separation from the seatback, driving $PSI(t) > 0.75$.
+
+\subsection{Multi-Etiology Fusion Logic}
+Feature vector $\mathbf{x}(t) = [EAR, \theta_{\text{pitch}}, HR_{rPPG}, SER_{2-6\text{Hz}}, PSI, Grip]^T$ is evaluated every $100\text{ ms}$ through a multi-branch Bayesian classifier:
+\begin{equation}
+\label{eq:bayes}
+P(C_k \mid \mathbf{x}) = \frac{P(\mathbf{x} \mid C_k) P(C_k)}{\sum_{j=0}^2 P(\mathbf{x} \mid C_j) P(C_j)}
+\end{equation}
+In Equation~\eqref{eq:bayes}, $C_k$ denotes the candidate clinical class for $k \in \{0, 1, 2\}$, $P(\mathbf{x} \mid C_k)$ represents the class-conditional feature likelihood, and $P(C_k)$ represents the operational prior probability.
+
+Table~\ref{tab:features} defines the physiological decision thresholds established across the target classes.
+
+\begin{table}[htbp]
+\caption{Multimodal parameter matrix across evaluated classes}
+\label{tab:features}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccc}
+\toprule
+Parameter & Normal ($C_0$) & Syncope ($C_1$) & Seizure ($C_2$) \\
+\midrule
+Eye Openness ($EAR$) & $0.25\text{--}0.38$ & $< 0.15$ ($>2$\,s) & Flutter / Closed \\
+Head Pitch ($\theta_{\text{pitch}}$) & $-10^\circ \text{ to } +10^\circ$ & $< -25^\circ$ & Oscillating jerks \\
+Inertial $SER_{2-6\text{Hz}}$ & $< 0.20$ & $< 0.15$ & $> 0.65$ \\
+Cardiac Rate ($HR_{rPPG}$) & $60\text{--}100$\,BPM & $<40$ or $>150$\,BPM & $100\text{--}140$\,BPM \\
+Seatback Slump ($PSI$) & $0.05\text{--}0.20$ & $> 0.75$ & $0.20\text{--}0.50$ \\
+Wheel Grip Status & Active & Disengaged ($>2$\,s) & Clenched / Erratic \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+A medical event is confirmed when posterior confidence exceeds threshold $\Gamma = 0.85$ over a verification window of $2.0\text{ seconds}$.
+
+Figure~\ref{fig:flowchart} outlines the sequential progression of data across the pipeline, beginning with feature extraction, proceeding through cross-sensor watchdog verification, entering Bayesian classification, and culminating in the execution of the safety maneuver.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    stage/.style={rectangle, draw=black, fill=gray!5, thick, minimum width=8.0cm, minimum height=0.85cm, align=left, font=\scriptsize},
+    arr/.style={-{Stealth[scale=0.9]}, thick}
+]
+    % Stage 1
+    \node[stage] (s1) at (0, 3.3) {\textbf{Stage 1: Feature Extraction} (every $100$\,ms)\\{\tiny Extract $EAR$, $\theta_{\text{pitch}}$, $HR_{rPPG}$ from NIR video; $SER_{2-6\text{Hz}}$ from IMU; $PSI$ from FSR; $Grip$ status}};
+
+    % Stage 2
+    \node[stage] (s2) at (0, 2.2) {\textbf{Stage 2: Cross-Sensor Watchdog \& Anti-Spoofing}\\{\tiny Check optical SNR ($>-15$\,dB); cross-validate $HR_{rPPG}$ against steering activity; check IMU heartbeat}};
+
+    % Stage 3
+    \node[stage] (s3) at (0, 1.1) {\textbf{Stage 3: Multi-Etiology Bayesian Classifier}\\{\tiny Compute $P(C_k \mid \mathbf{x})$ via Eq.~\eqref{eq:bayes} for $C_0$: Normal, $C_1$: Syncope, $C_2$: Seizure; apply $2.0$\,s verification}};
+
+    % Stage 4
+    \node[stage] (s4) at (0, 0.0) {\textbf{Stage 4: UNECE R157 Safety MRM \& V2X Broadcast}\\{\tiny $t=0\text{--}3$\,s Pre-Alert $\to$ $t=4$\,s Escalation $\to$ $t=10$\,s Takeover ($-3.2\text{ m/s}^2$) $\to$ $t=30$\,s Stop \& eCall}};
+
+    \draw[arr] (s1) -- (s2);
+    \draw[arr] (s2) -- (s3);
+    \draw[arr] (s3) -- (s4);
+\end{tikzpicture}%
+}
+\caption{Multimodal detection and safety control pipeline showing stages 1 through 4}
+\label{fig:flowchart}
+\end{figure}
+
+\section{Vehicle Safety Response \& Fault Handling}
+\subsection{UNECE R157-Aligned Minimum Risk Maneuver Target}
+Upon clinical verification at $t=0\text{ s}$, the execution controller transitions through four operational phases:
+\begin{itemize}
+    \item Phase 1 (Pre-Alert, $t = 0\text{--}3\text{ s}$): An escalating acoustic chime and haptic steering vibration pulse engage. The prototype uses a $4.0\text{ Nm}$ steering-torque threshold or brake-pedal displacement for manual override, subject to seizure-aware suppression.
+    \item Phase 2 (Escalation, $t = 4\text{ s}$): Longitudinal and lateral control are assumed by the automated controller, and hazard flashers activate at $2.0\text{ Hz}$.
+    \item Phase 3 (Active MRM, $t = 10\text{ s}$): The prototype activates its simulated emergency-message path and applies controlled deceleration at $-3.2\text{ m/s}^2$ while moving toward the modeled shoulder position.
+    \item Phase 4 (Standstill): The software controller models parking-brake, door, and emergency-message state changes; these are not connected to real vehicle actuators or wireless services.
+\end{itemize}
+
+\subsection{Cross-Sensor Plausibility \& Watchdog Logic}
+To illustrate an ASIL-D-oriented safety decomposition, Algorithm~\ref{alg:watchdog} details the prototype runtime plausibility and anti-spoofing watchdog logic executed on every cycle. Formal ISO 26262 compliance is outside the prototype scope.
+
+\begin{algorithm}[htbp]
+\caption{Cross-sensor plausibility and anti-spoofing watchdog logic}
+\label{alg:watchdog}
+\begin{algorithmic}[1]
+\REQUIRE Feature vector $\mathbf{x}(t)$, confidence threshold $\Gamma = 0.85$, verification duration $T_{ver} = 2.0\text{ s}$, optical signal-to-noise ratio $\text{SNR}_{cam}$
+\ENSURE System operational mode $S_{sys}$, confirmed clinical class $C_{active}$, MRM trigger flag $F_{act}$
+\STATE Compute class posterior probabilities $P(C_k \mid \mathbf{x}(t))$ for $k \in \{0, 1, 2\}$ via Equation~\eqref{eq:bayes}
+\IF{$\text{SNR}_{cam} < -15\text{ dB}$ \OR face tracking is lost}
+    \STATE Set $S_{sys} \leftarrow \text{Degraded Mode 1}$
+    \STATE Re-evaluate classification using reduced vector $\mathbf{x}_{deg} = [SER_{2-6\text{Hz}}, PSI, Grip]^T$
+\ENDIF
+\IF{I2C communication heartbeat from headrest IMU times out}
+    \STATE Set $S_{sys} \leftarrow \text{Degraded Mode 2}$
+    \STATE Re-evaluate classification using the remaining vision and tactile features
+\ENDIF
+\IF{$HR_{rPPG} == 0\text{ BPM}$ \AND $Grip == \text{Active}$ \AND manual steering torque exceeds $1.0\text{ Nm}$}
+    \STATE Log optical laser spoofing exception to internal security register
+    \STATE Set $F_{act} \leftarrow \text{FALSE}$
+    \RETURN $S_{sys}, C_0, F_{act}$
+\ENDIF
+\IF{$\max_k P(C_k \mid \mathbf{x}(t)) \ge \Gamma$ continuously for $t_{persist} \ge T_{ver}$}
+    \STATE Set $C_{active} \leftarrow \arg\max_k P(C_k \mid \mathbf{x}(t))$
+    \IF{$C_{active} \neq C_0$}
+        \STATE Set $F_{act} \leftarrow \text{TRUE}$
+    \ENDIF
+\ELSE
+    \STATE Set $C_{active} \leftarrow C_0$
+    \STATE Set $F_{act} \leftarrow \text{FALSE}$
+\ENDIF
+\RETURN $S_{sys}, C_{active}, F_{act}$
+\end{algorithmic}
+\end{algorithm}
+
+As formalized in Algorithm~\ref{alg:watchdog}, optical degradation selects Degraded Mode 1 and an IMU heartbeat failure selects Degraded Mode 2. If optical laser injection reports an artificial cardiac arrest ($HR = 0\text{ BPM}$) while manual steering torque and active grip confirm physical driving activity, the interlock suppresses false emergency braking.
+
+\section{Privacy-Preserving V2X Telematics \& Cybersecurity}
+\subsection{Anonymized 76-Byte Medical Extension Container}
+Standard eCall payloads transmit vehicle and location information, while this prototype explores a compact medical extension format for future deployment. CabinGuard-ADI defines a 76-byte Medical Extension Container in its software telematics layer:
+\begin{itemize}
+    \item Protocol version (1 byte).
+    \item Etiology indicator (1 byte): \texttt{0x01} for Cardiac Syncope, \texttt{0x02} for Seizure, and \texttt{0xFF} for Unspecified.
+    \item Confidence score (1 byte) scaled across $[0, 100]\%$.
+    \item Verification latency (2 bytes) recorded in milliseconds.
+    \item Sensor operational bitmask (1 byte).
+    \item UTC Unix epoch timestamp (4 bytes).
+    \item Prototype HMAC-SHA512-derived authentication tag (64 bytes), not an HSM-backed ECDSA signature.
+\end{itemize}
+The prototype MEC omits personal identifiers, facial geometry vectors, and raw physiological waveforms. This supports data minimization by design, but does not establish GDPR compliance.
+
+Figure~\ref{fig:frames} details the bit-level structure of the internal CAN-FD command frame, the external V2V ETSI DENM message, and the 76-byte MEC emergency payload.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\columnwidth}{!}{%
+\begin{tikzpicture}[
+    framebox/.style={rectangle, draw=black, fill=white, thin, minimum height=0.55cm, align=center, font=\tiny},
+    arr/.style={-{Stealth[scale=0.8]}, thick}
+]
+    % Panel (a): CAN-FD Frame (Width = 8.1 cm)
+    \node[anchor=west, font=\scriptsize, font=\bfseries] at (0, 3.4) {(a) 8-Byte Prototype Command Frame};
+    \node[framebox, fill=gray!15, minimum width=1.0cm] at (0.5, 2.9) {Arb ID\\{\tiny 11/29b}};
+    \node[framebox, fill=gray!15, minimum width=0.7cm] at (1.35, 2.9) {Ctrl\\{\tiny DLC}};
+    \node[framebox, fill=blue!10, minimum width=1.4cm] at (2.4, 2.9) {Freshness\\{\tiny Low Byte}};
+    \node[framebox, fill=red!10, minimum width=2.6cm] at (4.4, 2.9) {MRM Payload (40 Bytes)\\{\tiny Decel $-3.2\text{ m/s}^2$, Hazards}};
+    \node[framebox, fill=yellow!15, minimum width=1.5cm] at (6.45, 2.9) {HMAC Tag\\{\tiny 24-bit}};
+    \node[framebox, fill=gray!15, minimum width=0.9cm] at (7.65, 2.9) {CRC\\{\tiny 21b}};
+
+    % Panel (b): DENM (Width = 8.2 cm)
+    \node[anchor=west, font=\scriptsize, font=\bfseries] at (0, 2.2) {(b) ETSI ITS-G5 DENM V2V Broadcast};
+    \node[framebox, fill=gray!15, minimum width=1.2cm] at (0.6, 1.7) {ITS Header\\{\tiny Station ID}};
+    \node[framebox, fill=blue!10, minimum width=1.8cm] at (2.1, 1.7) {Management Container\\{\tiny ActionID, 5s Valid}};
+    \node[framebox, fill=red!10, minimum width=2.0cm] at (4.0, 1.7) {Situation Container\\{\tiny Cause Code 6: Stop}};
+    \node[framebox, fill=green!10, minimum width=1.6cm] at (5.8, 1.7) {Location\\{\tiny GPS, Speed}};
+    \node[framebox, fill=yellow!15, minimum width=1.6cm] at (7.4, 1.7) {IEEE 1609.2\\{\tiny Pseudonym}};
+
+    % Panel (c): 76-byte MEC (Width = 8.2 cm)
+    \node[anchor=west, font=\scriptsize, font=\bfseries] at (0, 1.0) {(c) 76-Byte Medical Extension Container (MEC)};
+    \node[framebox, fill=gray!15, minimum width=0.5cm] at (0.25, 0.5) {Ver\\{\tiny B0}};
+    \node[framebox, fill=red!15, minimum width=1.0cm] at (1.0, 0.5) {Etiology\\{\tiny B1: Code}};
+    \node[framebox, fill=gray!15, minimum width=0.8cm] at (1.9, 0.5) {Conf.\\{\tiny B2: \%}};
+    \node[framebox, fill=gray!15, minimum width=0.9cm] at (2.75, 0.5) {Latency\\{\tiny B3-4: ms}};
+    \node[framebox, fill=gray!15, minimum width=0.8cm] at (3.6, 0.5) {Mask\\{\tiny B5: Sens}};
+    \node[framebox, fill=gray!15, minimum width=0.6cm] at (4.3, 0.5) {Rsv\\{\tiny B6-7}};
+    \node[framebox, fill=gray!15, minimum width=1.1cm] at (5.15, 0.5) {Timestamp\\{\tiny B8-11: UTC}};
+    \node[framebox, fill=blue!10, minimum width=2.5cm] at (6.95, 0.5) {Prototype HMAC Tag\\{\tiny Bytes 12--75 (64 Bytes)}};
+\end{tikzpicture}%
+}
+\caption{Prototype telematics concepts showing (a) an 8-byte authenticated command frame, (b) a future V2X message concept, and (c) the 76-byte MEC payload}
+\label{fig:frames}
+\end{figure}
+
+\subsection{Cybersecurity Defense Architecture}
+The prototype authenticates the 8-byte command frame with a keyed three-byte tag and rejects tampered, replayed, and wrong-key frames in software. It does not implement AUTOSAR SecOC, HSM-backed AES-CMAC, ECDSA, pseudonym certificates, or real V2X transmission. Those controls are future production requirements.
+
+\section{Experimental Validation \& Results}
+\subsection{Synthetic Prototype Benchmark}
+The current evidence is generated from deterministic synthetic sensor streams rather than clinical or real-vehicle recordings. A reproducible 50-trial benchmark varies ten seeds across five scenarios and reports classification, detection-latency, false-alarm, and message-integrity metrics. These results assess software behavior only and do not establish clinical sensitivity or production safety.
+\begin{itemize}
+    \item The normal, syncope, and seizure scenarios provide the three required prototype classes; optical blinding and IMU disconnect scenarios exercise safe-failure behavior.
+    \item The benchmark runner records a confusion matrix, per-class precision, recall, and F1, together with detection-latency distributions and false-positive/false-negative counts.
+    \item Public clinical datasets and real-sensor recordings remain planned validation sources; no clinical performance claim is made here.
+\end{itemize}
+
+\subsection{Limitations and Phase 2 Validation}
+The present implementation uses synthetic sensor streams, has no real camera or IMU capture, and does not actuate a real vehicle. No CARLA or ROS2 closed-loop validation, clinical validation, production HSM, certified ASIL implementation, or real wireless eCall/DENM transmission is claimed. The classifier thresholds are engineering assumptions whose clinical generalization is unknown. Phase 2 should add real sensors or an approved vehicle simulator, controlled replay and tampering experiments, timing measurements on the target platform, and appropriately governed clinical or public-data validation.
+
+\section{Conclusion}
+CabinGuard-ADI presents a software prototype and target architecture for acute driver medical event detection and safety mitigation. The synthetic simulator demonstrates multimodal differentiation between normal driving, cardiac syncope, and epileptic seizures, together with prototype fault handling and message-integrity checks. The controller is R157-aligned as a design target, while the 76-byte MEC is a privacy-conscious prototype format rather than a demonstrated wireless eCall or DENM deployment. No clinical, real-sensor, CARLA, HSM, or certified ASIL validation is claimed; these are required follow-up activities for Phase 2.
+
+\begin{thebibliography}{00}
+\bibitem{baber2020} E. E. E. Baber, ``Incidence of sudden driver incapacitation in transport accidents,'' \emph{Accident Analysis \& Prevention}, vol. 142, p. 105572, 2020.
+\bibitem{martinez2024} J. M. Martinez et al., ``A Survey of In-Cabin Monitoring Systems for Smart Vehicles: From Distraction to Health Crises,'' \emph{IEEE Trans. Intell. Transp. Syst.}, vol. 25, no. 3, pp. 2140--2158, 2024.
+\bibitem{fisher2014} R. Fisher et al., ``Operational definition of epilepsy and motor seizure manifestations,'' \emph{Epilepsia}, vol. 55, no. 4, pp. 475--482, 2014.
+\bibitem{shenthar2023} M. D. Shenthar et al., ``2023 ACC/AHA/HRS Guideline for the Evaluation and Management of Patients With Syncope,'' \emph{J. Am. Coll. Cardiol.}, vol. 82, no. 12, pp. 1180--1220, 2023.
+\bibitem{rao2023} S. K. Rao and H. J. Lee, ``Contactless Driver Vital Signs Monitoring Using Multimodal Sensor Fusion: A Review,'' \emph{IEEE Sensors J.}, vol. 23, no. 18, pp. 20112--20126, 2023.
+\bibitem{gupta2024} A. Gupta et al., ``IoT and Wearable Devices for In-Cabin Health Monitoring: A Systematic Review,'' \emph{IEEE Internet Things J.}, vol. 11, no. 6, pp. 9812--9828, 2024.
+\bibitem{unece157} United Nations Economic Commission for Europe, ``Automated Lane Keeping Systems (ALKS),'' \emph{UNECE Regulation No. 157}, Geneva, 2021 (Amended 2024).
+\bibitem{wolf2025} M. Wolf et al., ``Lightweight CAN Bus Intrusion Detection Systems: A Systematic Survey,'' \emph{IEEE Trans. Veh. Technol.}, vol. 74, no. 1, pp. 410--425, 2025.
+\bibitem{liu2023} X. Liu et al., ``rPPG-Toolbox: Deep Remote Photoplethysmography Benchmarking,'' in \emph{Proc. NeurIPS}, 2023.
+\bibitem{wang2017pos} W. Wang, A. C. den Brinker, S. Stuijk, and G. de Haan, ``Algorithmic Principles of Remote PPG,'' \emph{IEEE Trans. Biomed. Eng.}, vol. 64, no. 7, pp. 1479--1491, 2017.
+\bibitem{july2024} W. July et al., ``PhysDrive: A Multimodal Dataset for Contactless In-Vehicle Physiological Sensing,'' \emph{arXiv:2404.12845}, 2024.
+\bibitem{chen2025} H. Chen et al., ``MMDrive: A Multi-Modal Dataset for Driver Monitoring and In-Vehicle Physiology,'' in \emph{Proc. IEEE/CVF CVPR}, 2025.
+\bibitem{vandecasteele2023} K. Vandecasteele et al., ``Automated Epileptic Seizure Detection Using Wearable Accelerometer Sensors,'' \emph{Front. Neurol.}, vol. 14, p. 1124501, 2023.
+\bibitem{ramgopal2024} S. Ramgopal et al., ``Seizure detection using wearable sensors: A clinical review,'' \emph{Epilepsia}, vol. 65, no. 2, pp. 280--295, 2024.
+\bibitem{xu2024} Y. Xu et al., ``VSViG: Real-time Video-based Seizure Detection via Skeleton-based Spatiotemporal Vision Graph Networks,'' \emph{Med. Image Anal.}, vol. 92, p. 103042, 2024.
+\bibitem{soukupova2016} T. Soukupov{\'a} and J. {\v{C}}ech, ``Real-Time Eye Blink Detection using Facial Landmarks,'' in \emph{Proc. Comput. Vis. Winter Workshop}, 2016.
+\bibitem{welch1967} P. D. Welch, ``The use of fast Fourier transform for the estimation of power spectra: A method based on time averaging over short, modified periodograms,'' \emph{IEEE Trans. Audio Electroacoust.}, vol. 15, no. 2, pp. 70--73, 1967.
+\bibitem{alvarez2021} I. Alvarez et al., ``DMD: Driver Monitoring Dataset for Attention Analysis,'' in \emph{Proc. IEEE/CVF CVPRW}, 2021.
+\bibitem{goldberger2000} A. L. Goldberger et al., ``PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource,'' \emph{Circulation}, vol. 101, no. 23, pp. e215--e220, 2000.
+\end{thebibliography}
+
+\end{document}

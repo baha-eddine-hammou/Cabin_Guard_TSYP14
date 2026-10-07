@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="100%" height="100%" style="background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="box-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+      <feOffset dx="0" dy="2" />
+      <feComponentTransfer><feFuncA type="linear" slope="0.1" /></feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Title -->
+  <rect x="25" y="15" width="950" height="42" rx="6" fill="#0f172a" />
+  <text x="500" y="42" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold">CabinGuard-ADI: In-Vehicle CAN-FD &amp; V2X Emergency Message Frame Architecture</text>
+
+  <!-- Section 1: In-Vehicle CAN-FD Frame with SecOC (Top Panel) -->
+  <g transform="translate(30, 75)" filter="url(#box-shadow)">
+    <rect width="940" height="150" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" />
+    <rect width="940" height="30" rx="8" fill="#1e293b" />
+    <text x="20" y="20" fill="#ffffff" font-size="12" font-weight="bold">(a) In-Vehicle CAN-FD Frame with AUTOSAR SecOC Authentication (64-Byte Payload)</text>
+
+    <!-- Bit diagram of CAN-FD Frame -->
+    <g transform="translate(20, 50)">
+      <!-- SOF + Arbitration ID -->
+      <rect x="0" y="0" width="110" height="50" fill="#e2e8f0" stroke="#64748b" stroke-width="1" />
+      <text x="55" y="22" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Arbitration ID</text>
+      <text x="55" y="38" text-anchor="middle" fill="#475569" font-size="9">11-bit / 29-bit</text>
+
+      <!-- Control Flags -->
+      <rect x="110" y="0" width="70" height="50" fill="#e2e8f0" stroke="#64748b" stroke-width="1" />
+      <text x="145" y="22" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Control</text>
+      <text x="145" y="38" text-anchor="middle" fill="#475569" font-size="9">EDL/BRS/DLC</text>
+
+      <!-- SecOC PDU Header -->
+      <rect x="180" y="0" width="130" height="50" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="245" y="22" text-anchor="middle" fill="#1e40af" font-size="10" font-weight="bold">SecOC Freshness</text>
+      <text x="245" y="38" text-anchor="middle" fill="#1d4ed8" font-size="9">32-bit Counter Value</text>
+
+      <!-- Actuation Payload: Braking & Steering -->
+      <rect x="310" y="0" width="300" height="50" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5" />
+      <text x="460" y="22" text-anchor="middle" fill="#991b1b" font-size="10" font-weight="bold">Autonomous MRM Actuation Command Payload (40 Bytes)</text>
+      <text x="460" y="38" text-anchor="middle" fill="#b91c1c" font-size="9">Target Decel (-3.2 m/s²), Steering Trajectory, Hazard Flash (2 Hz), Door Unlock</text>
+
+      <!-- SecOC MAC (CMAC-AES-128) -->
+      <rect x="610" y="0" width="180" height="50" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="700" y="22" text-anchor="middle" fill="#92400e" font-size="10" font-weight="bold">Message Auth Code (MAC)</text>
+      <text x="700" y="38" text-anchor="middle" fill="#b45309" font-size="9">Truncated 64-bit AES-128 CMAC</text>
+
+      <!-- CRC + ACK + EOF -->
+      <rect x="790" y="0" width="110" height="50" fill="#e2e8f0" stroke="#64748b" stroke-width="1" />
+      <text x="845" y="22" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">CRC + ACK</text>
+      <text x="845" y="38" text-anchor="middle" fill="#475569" font-size="9">21-bit CRC + EOF</text>
+    </g>
+
+    <!-- Description note below -->
+    <text x="20" y="132" fill="#475569" font-size="10">SecOC Defense: Dropped if CMAC mismatch or freshness sequence counter &lt; last verified value (Neutralizes CAN bus injection &amp; replay attacks).</text>
+  </g>
+
+  <!-- Section 2: V2V ETSI ITS-G5 DENM Frame Structure (Middle Panel) -->
+  <g transform="translate(30, 240)" filter="url(#box-shadow)">
+    <rect width="940" height="125" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" />
+    <rect width="940" height="30" rx="8" fill="#1e293b" />
+    <text x="20" y="20" fill="#ffffff" font-size="12" font-weight="bold">(b) V2V ETSI ITS-G5 DENM Broadcast Message (Decentralized Environmental Notification)</text>
+
+    <g transform="translate(20, 48)">
+      <!-- ITS Header -->
+      <rect x="0" y="0" width="150" height="42" fill="#e2e8f0" stroke="#64748b" stroke-width="1" />
+      <text x="75" y="18" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">ITS PDU Header</text>
+      <text x="75" y="32" text-anchor="middle" fill="#475569" font-size="9">Protocol ID, Station ID</text>
+
+      <!-- Management Container -->
+      <rect x="150" y="0" width="220" height="42" fill="#dbeafe" stroke="#3b82f6" stroke-width="1" />
+      <text x="260" y="18" text-anchor="middle" fill="#1e40af" font-size="10" font-weight="bold">Management Container</text>
+      <text x="260" y="32" text-anchor="middle" fill="#1d4ed8" font-size="9">ActionID, Timestamp, Validity (5 s)</text>
+
+      <!-- Situation Container -->
+      <rect x="370" y="0" width="230" height="42" fill="#fee2e2" stroke="#ef4444" stroke-width="1.5" />
+      <text x="485" y="18" text-anchor="middle" fill="#991b1b" font-size="10" font-weight="bold">Situation Container</text>
+      <text x="485" y="32" text-anchor="middle" fill="#b91c1c" font-size="9">Cause Code 6 (Emergency Stop)</text>
+
+      <!-- Location Container -->
+      <rect x="600" y="0" width="160" height="42" fill="#f0fdf4" stroke="#22c55e" stroke-width="1" />
+      <text x="680" y="18" text-anchor="middle" fill="#166534" font-size="10" font-weight="bold">Location Container</text>
+      <text x="680" y="32" text-anchor="middle" fill="#15803d" font-size="9">Lat/Lon, Speed, Heading</text>
+
+      <!-- Security Header -->
+      <rect x="760" y="0" width="140" height="42" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" />
+      <text x="830" y="18" text-anchor="middle" fill="#92400e" font-size="10" font-weight="bold">IEEE 1609.2 Security</text>
+      <text x="830" y="32" text-anchor="middle" fill="#b45309" font-size="9">Rotating Pseudonym Cert</text>
+    </g>
+
+    <text x="20" y="112" fill="#475569" font-size="10">Target: All adjacent and trailing vehicles within 300 m radius over 5.9 GHz DSRC / C-V2X direct communication.</text>
+  </g>
+
+  <!-- Section 3: 76-Byte Anonymized Medical Extension Container (Bottom Panel) -->
+  <g transform="translate(30, 380)" filter="url(#box-shadow)">
+    <rect width="940" height="200" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" />
+    <rect width="940" height="30" rx="8" fill="#1e293b" />
+    <text x="20" y="20" fill="#ffffff" font-size="12" font-weight="bold">(c) 76-Byte Medical Extension Container (MEC) Bit-Level Specification (Next-Gen eCall IMS/SIP)</text>
+
+    <!-- Byte field blocks -->
+    <g transform="translate(20, 48)">
+      <!-- Byte 0: Version -->
+      <rect x="0" y="0" width="80" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="0" y="0" width="80" height="18" fill="#f1f5f9" />
+      <text x="40" y="13" text-anchor="middle" fill="#475569" font-size="9">Byte 0</text>
+      <text x="40" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Version</text>
+      <text x="40" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">0x01 (8-bit)</text>
+
+      <!-- Byte 1: Etiology Code -->
+      <rect x="80" y="0" width="130" height="60" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5" />
+      <rect x="80" y="0" width="130" height="18" fill="#fee2e2" />
+      <text x="145" y="13" text-anchor="middle" fill="#991b1b" font-size="9">Byte 1</text>
+      <text x="145" y="35" text-anchor="middle" fill="#b91c1c" font-size="10" font-weight="bold">Etiology Code</text>
+      <text x="145" y="50" text-anchor="middle" fill="#dc2626" font-size="8.5">0x01:Card, 0x02:Seiz</text>
+
+      <!-- Byte 2: Confidence -->
+      <rect x="210" y="0" width="100" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="210" y="0" width="100" height="18" fill="#f1f5f9" />
+      <text x="260" y="13" text-anchor="middle" fill="#475569" font-size="9">Byte 2</text>
+      <text x="260" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Confidence</text>
+      <text x="260" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">[0 - 100]%</text>
+
+      <!-- Bytes 3-4: Latency -->
+      <rect x="310" y="0" width="110" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="310" y="0" width="110" height="18" fill="#f1f5f9" />
+      <text x="365" y="13" text-anchor="middle" fill="#475569" font-size="9">Bytes 3 - 4</text>
+      <text x="365" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Latency</text>
+      <text x="365" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">uint16 (ms)</text>
+
+      <!-- Byte 5: Sensor Mask -->
+      <rect x="420" y="0" width="110" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="420" y="0" width="110" height="18" fill="#f1f5f9" />
+      <text x="475" y="13" text-anchor="middle" fill="#475569" font-size="9">Byte 5</text>
+      <text x="475" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Sensor Mask</text>
+      <text x="475" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">Bit0:Cam..Bit3:Grip</text>
+
+      <!-- Bytes 6-7: Reserved -->
+      <rect x="530" y="0" width="80" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="530" y="0" width="80" height="18" fill="#f1f5f9" />
+      <text x="570" y="13" text-anchor="middle" fill="#475569" font-size="9">Bytes 6 - 7</text>
+      <text x="570" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Reserved</text>
+      <text x="570" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">0x0000</text>
+
+      <!-- Bytes 8-11: Timestamp -->
+      <rect x="610" y="0" width="120" height="60" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+      <rect x="610" y="0" width="120" height="18" fill="#f1f5f9" />
+      <text x="670" y="13" text-anchor="middle" fill="#475569" font-size="9">Bytes 8 - 11</text>
+      <text x="670" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">UTC Epoch</text>
+      <text x="670" y="50" text-anchor="middle" fill="#64748b" font-size="8.5">uint32 Unix Time</text>
+
+      <!-- Bytes 12-75: ECDSA Signature -->
+      <rect x="730" y="0" width="170" height="60" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" />
+      <rect x="730" y="0" width="170" height="18" fill="#dbeafe" />
+      <text x="815" y="13" text-anchor="middle" fill="#1e40af" font-size="9">Bytes 12 - 75 (64 Bytes)</text>
+      <text x="815" y="35" text-anchor="middle" fill="#1d4ed8" font-size="10" font-weight="bold">ECDSA P-256 Signature</text>
+      <text x="815" y="50" text-anchor="middle" fill="#2563eb" font-size="8.5">(r, s) Components from HSM</text>
+    </g>
+
+    <!-- Privacy compliance notes -->
+    <text x="20" y="130" fill="#0f172a" font-size="10" font-weight="bold">Privacy Compliance Proof:</text>
+    <text x="20" y="148" fill="#475569" font-size="9">• Zero facial geometry, landmarks, or pixel coordinates transmitted.</text>
+    <text x="20" y="162" fill="#475569" font-size="9">• Zero raw ECG, rPPG, or acceleration waveforms transmitted.</text>
+    <text x="20" y="176" fill="#15803d" font-size="9" font-weight="bold">• Only clinical categorization code and diagnostic confidence dispatched to 112/911 PSAP emergency teams.</text>
+  </g>
+</svg>
+

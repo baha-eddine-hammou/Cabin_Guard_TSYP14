@@ -1,0 +1,262 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 680" width="100%" height="100%" style="background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <defs>
+    <filter id="card-shadow" x="-5%" y="-5%" width="110%" height="115%" filterUnits="userSpaceOnUse">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5" />
+      <feOffset dx="0" dy="2" />
+      <feComponentTransfer><feFuncA type="linear" slope="0.12" /></feComponentTransfer>
+      <feMerge>
+        <feMergeNode />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#334155" />
+    </marker>
+    <marker id="red-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#dc2626" />
+    </marker>
+    <marker id="green-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#16a34a" />
+    </marker>
+  </defs>
+
+  <!-- Title -->
+  <rect x="25" y="15" width="950" height="42" rx="6" fill="#0f172a" />
+  <text x="500" y="42" text-anchor="middle" fill="#ffffff" font-size="16" font-weight="bold">CabinGuard-ADI: Multi-Modal Detection &amp; Safety Control Flowchart</text>
+
+  <!-- Stage 1: Feature Extraction Column -->
+  <g transform="translate(30, 80)">
+    <rect width="210" height="570" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    <rect width="210" height="32" rx="8" fill="#1e293b" />
+    <text x="105" y="21" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">1. Feature Extraction</text>
+
+    <!-- Node: EAR & MAR -->
+    <g transform="translate(15, 48)" filter="url(#card-shadow)">
+      <rect width="180" height="60" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="12" y="20" fill="#1d4ed8" font-size="11" font-weight="bold">Eye Openness (EAR)</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">MediaPipe Eyelid Mesh</text>
+      <text x="12" y="50" fill="#0f172a" font-size="10" font-weight="bold">EAR &lt; 0.15 -&gt; Eye Closure</text>
+    </g>
+
+    <!-- Node: Head Pose -->
+    <g transform="translate(15, 120)" filter="url(#card-shadow)">
+      <rect width="180" height="60" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="12" y="20" fill="#1d4ed8" font-size="11" font-weight="bold">Cranial Pitch (θ_pitch)</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">PnP 3D Model Solve</text>
+      <text x="12" y="50" fill="#0f172a" font-size="10" font-weight="bold">Pitch &lt; -25° -&gt; Head Drop</text>
+    </g>
+
+    <!-- Node: rPPG -->
+    <g transform="translate(15, 192)" filter="url(#card-shadow)">
+      <rect width="180" height="65" rx="5" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="12" y="20" fill="#1d4ed8" font-size="11" font-weight="bold">Hemodynamics (rPPG)</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">Forehead POS Projection</text>
+      <text x="12" y="50" fill="#64748b" font-size="10">0.7-3.5 Hz Bandpass FFT</text>
+      <text x="12" y="62" fill="#0f172a" font-size="9" font-weight="bold">HR &lt; 40 or &gt; 150 BPM</text>
+    </g>
+
+    <!-- Node: Headrest SER -->
+    <g transform="translate(15, 270)" filter="url(#card-shadow)">
+      <rect width="180" height="65" rx="5" fill="#ffffff" stroke="#10b981" stroke-width="1.5" />
+      <text x="12" y="20" fill="#047857" font-size="11" font-weight="bold">Clonic Energy (SER)</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">Headrest IMU Accel Mag</text>
+      <text x="12" y="50" fill="#64748b" font-size="10">Welch Periodogram</text>
+      <text x="12" y="62" fill="#0f172a" font-size="9" font-weight="bold">SER(2-6Hz) &gt; 0.65</text>
+    </g>
+
+    <!-- Node: FSR PSI -->
+    <g transform="translate(15, 348)" filter="url(#card-shadow)">
+      <rect width="180" height="60" rx="5" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="12" y="20" fill="#b45309" font-size="11" font-weight="bold">Slump Index (PSI)</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">Seatback Contact Delta</text>
+      <text x="12" y="50" fill="#0f172a" font-size="10" font-weight="bold">PSI &gt; 0.75 -&gt; Torso Loss</text>
+    </g>
+
+    <!-- Node: Capacitive Grip -->
+    <g transform="translate(15, 420)" filter="url(#card-shadow)">
+      <rect width="180" height="55" rx="5" fill="#ffffff" stroke="#8b5cf6" stroke-width="1.5" />
+      <text x="12" y="20" fill="#6d28d9" font-size="11" font-weight="bold">Steering Grip Flag</text>
+      <text x="12" y="36" fill="#64748b" font-size="10">Capacitive Thresholding</text>
+      <text x="12" y="50" fill="#0f172a" font-size="10" font-weight="bold">Grip == 0 (Hands Off)</text>
+    </g>
+
+    <!-- Feature Vector Output Box -->
+    <rect x="15" y="490" width="180" height="60" rx="5" fill="#e2e8f0" stroke="#94a3b8" />
+    <text x="105" y="512" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="bold">Feature Vector x(t)</text>
+    <text x="105" y="530" text-anchor="middle" fill="#475569" font-size="10">[EAR, θ_p, HR, SER,</text>
+    <text x="105" y="542" text-anchor="middle" fill="#475569" font-size="10">PSI, Grip] every 100 ms</text>
+  </g>
+
+  <!-- Arrow from Stage 1 to Stage 2 -->
+  <path d="M 240 520 L 280 520 L 280 230 L 300 230" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+  <!-- Stage 2: Cross-Sensor Watchdog & Plausibility -->
+  <g transform="translate(305, 80)">
+    <rect width="215" height="570" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    <rect width="215" height="32" rx="8" fill="#1e293b" />
+    <text x="107" y="21" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">2. Plausibility &amp; Anti-Spoof</text>
+
+    <!-- Check 1: Camera Blinding -->
+    <g transform="translate(15, 48)" filter="url(#card-shadow)">
+      <polygon points="92,0 185,40 92,80 0,40" fill="#ffffff" stroke="#ef4444" stroke-width="1.5" />
+      <text x="92" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Camera Blind?</text>
+      <text x="92" y="48" text-anchor="middle" fill="#64748b" font-size="9">SNR &lt; -15 dB</text>
+    </g>
+    <!-- Degraded Mode 1 -->
+    <rect x="25" y="145" width="165" height="42" rx="4" fill="#fee2e2" stroke="#f87171" />
+    <text x="107" y="163" text-anchor="middle" fill="#991b1b" font-size="10" font-weight="bold">Degraded Mode 1</text>
+    <text x="107" y="177" text-anchor="middle" fill="#b91c1c" font-size="9">Bypass Vision (IMU+FSR)</text>
+    <path d="M 107 128 L 107 145" fill="none" stroke="#dc2626" stroke-width="1.5" marker-end="url(#red-arrow)" />
+    <text x="117" y="138" fill="#dc2626" font-size="9">Yes</text>
+
+    <!-- Check 2: Laser / Optical Spoofing -->
+    <g transform="translate(15, 205)" filter="url(#card-shadow)">
+      <polygon points="92,0 185,40 92,80 0,40" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="92" y="32" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">Optical Spoofing?</text>
+      <text x="92" y="45" text-anchor="middle" fill="#64748b" font-size="8.5">HR=0 BPM &amp;</text>
+      <text x="92" y="56" text-anchor="middle" fill="#64748b" font-size="8.5">Active Steering</text>
+    </g>
+    <!-- Suppress Alarm -->
+    <rect x="25" y="302" width="165" height="42" rx="4" fill="#fef3c7" stroke="#fcd34d" />
+    <text x="107" y="320" text-anchor="middle" fill="#92400e" font-size="10" font-weight="bold">Anti-Spoof Interlock</text>
+    <text x="107" y="334" text-anchor="middle" fill="#b45309" font-size="9">Suppress False Trigger</text>
+    <path d="M 107 285 L 107 302" fill="none" stroke="#d97706" stroke-width="1.5" marker-end="url(#flow-arrow)" />
+    <text x="117" y="295" fill="#d97706" font-size="9">Yes</text>
+
+    <!-- Check 3: IMU Disconnect -->
+    <g transform="translate(15, 360)" filter="url(#card-shadow)">
+      <polygon points="92,0 185,40 92,80 0,40" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="92" y="35" text-anchor="middle" fill="#0f172a" font-size="10" font-weight="bold">IMU Disconnect?</text>
+      <text x="92" y="48" text-anchor="middle" fill="#64748b" font-size="9">I2C Heartbeat Loss</text>
+    </g>
+    <!-- Degraded Mode 2 -->
+    <rect x="25" y="455" width="165" height="42" rx="4" fill="#eff6ff" stroke="#93c5fd" />
+    <text x="107" y="473" text-anchor="middle" fill="#1e40af" font-size="10" font-weight="bold">Degraded Mode 2</text>
+    <text x="107" y="487" text-anchor="middle" fill="#1d4ed8" font-size="9">Vision Optical Flow</text>
+    <path d="M 107 440 L 107 455" fill="none" stroke="#2563eb" stroke-width="1.5" marker-end="url(#flow-arrow)" />
+    <text x="117" y="450" fill="#2563eb" font-size="9">Yes</text>
+
+    <!-- Valid Data Path Forward -->
+    <rect x="25" y="515" width="165" height="38" rx="4" fill="#ecfdf5" stroke="#6ee7b7" />
+    <text x="107" y="533" text-anchor="middle" fill="#065f46" font-size="10" font-weight="bold">Verified Signals Valid</text>
+    <text x="107" y="545" text-anchor="middle" fill="#047857" font-size="9">Pass to Fusion Engine</text>
+  </g>
+
+  <!-- Arrow from Stage 2 to Stage 3 -->
+  <path d="M 520 534 L 560 534 L 560 210 L 580 210" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#flow-arrow)" />
+
+  <!-- Stage 3: Multi-Etiology Bayesian Classifier -->
+  <g transform="translate(585, 80)">
+    <rect width="180" height="570" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    <rect width="180" height="32" rx="8" fill="#1e293b" />
+    <text x="90" y="21" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">3. Multi-Etiology AI</text>
+
+    <!-- Bayesian Engine -->
+    <g transform="translate(10, 48)" filter="url(#card-shadow)">
+      <rect width="160" height="65" rx="5" fill="#ffffff" stroke="#64748b" stroke-width="1.5" />
+      <text x="80" y="23" text-anchor="middle" fill="#0f172a" font-size="11" font-weight="bold">Bayesian Posterior</text>
+      <text x="80" y="42" text-anchor="middle" fill="#334155" font-size="10">P(C_k | x) Evaluator</text>
+      <text x="80" y="57" text-anchor="middle" fill="#64748b" font-size="9">Eq. (7) Computation</text>
+    </g>
+
+    <!-- Branch C0: Normal -->
+    <g transform="translate(10, 135)" filter="url(#card-shadow)">
+      <rect width="160" height="65" rx="5" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5" />
+      <text x="80" y="23" text-anchor="middle" fill="#166534" font-size="11" font-weight="bold">Class C0: Normal</text>
+      <text x="80" y="40" text-anchor="middle" fill="#15803d" font-size="9">EAR &gt; 0.25 | SER &lt; 0.2</text>
+      <text x="80" y="54" text-anchor="middle" fill="#15803d" font-size="9">Grip == Active</text>
+    </g>
+
+    <!-- Branch C1: Cardiac Syncope -->
+    <g transform="translate(10, 220)" filter="url(#card-shadow)">
+      <rect width="160" height="85" rx="5" fill="#fef2f2" stroke="#ef4444" stroke-width="1.5" />
+      <text x="80" y="22" text-anchor="middle" fill="#991b1b" font-size="11" font-weight="bold">Class C1: Syncope</text>
+      <text x="80" y="39" text-anchor="middle" fill="#b91c1c" font-size="9">Atonic Torso Collapse</text>
+      <text x="80" y="52" text-anchor="middle" fill="#b91c1c" font-size="9">EAR &lt; 0.15 &amp; PSI &gt; 0.75</text>
+      <text x="80" y="65" text-anchor="middle" fill="#b91c1c" font-size="9">HR &lt; 40 or &gt; 150 BPM</text>
+      <text x="80" y="78" text-anchor="middle" fill="#dc2626" font-size="9" font-weight="bold">SER &lt; 0.15 (Still)</text>
+    </g>
+
+    <!-- Branch C2: Seizure -->
+    <g transform="translate(10, 325)" filter="url(#card-shadow)">
+      <rect width="160" height="85" rx="5" fill="#fff7ed" stroke="#ea580c" stroke-width="1.5" />
+      <text x="80" y="22" text-anchor="middle" fill="#9a3412" font-size="11" font-weight="bold">Class C2: Seizure</text>
+      <text x="80" y="39" text-anchor="middle" fill="#c2410c" font-size="9">Hyper-Motor Spasms</text>
+      <text x="80" y="52" text-anchor="middle" fill="#c2410c" font-size="9.5" font-weight="bold">SER(2-6Hz) &gt; 0.65</text>
+      <text x="80" y="65" text-anchor="middle" fill="#c2410c" font-size="9">Oscillating Head Pitch</text>
+      <text x="80" y="78" text-anchor="middle" fill="#c2410c" font-size="9">Elevated HR (100-140)</text>
+    </g>
+
+    <!-- Verification Window Check -->
+    <g transform="translate(10, 430)" filter="url(#card-shadow)">
+      <polygon points="80,0 160,35 80,70 0,35" fill="#ffffff" stroke="#6366f1" stroke-width="1.5" />
+      <text x="80" y="30" text-anchor="middle" fill="#0f172a" font-size="9.5" font-weight="bold">Confidence &gt;= 0.85</text>
+      <text x="80" y="44" text-anchor="middle" fill="#4338ca" font-size="8.5">Persists &gt;= 2.0 s?</text>
+    </g>
+
+    <!-- Action Decision -->
+    <rect x="10" y="520" width="160" height="35" rx="4" fill="#fee2e2" stroke="#f87171" />
+    <text x="80" y="542" text-anchor="middle" fill="#b91c1c" font-size="10" font-weight="bold">Trigger UNECE MRM</text>
+    <path d="M 80 500 L 80 520" fill="none" stroke="#ef4444" stroke-width="1.5" marker-end="url(#red-arrow)" />
+  </g>
+
+  <!-- Arrow from Stage 3 to Stage 4 -->
+  <path d="M 765 537 L 785 537 L 785 190 L 805 190" fill="none" stroke="#dc2626" stroke-width="2" marker-end="url(#red-arrow)" />
+
+  <!-- Stage 4: UNECE R157 MRM State Machine -->
+  <g transform="translate(810, 80)">
+    <rect width="165" height="570" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    <rect width="165" height="32" rx="8" fill="#1e293b" />
+    <text x="82" y="21" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="bold">4. Safety MRM &amp; V2X</text>
+
+    <!-- Phase 1: Pre-Alert -->
+    <g transform="translate(10, 48)" filter="url(#card-shadow)">
+      <rect width="145" height="75" rx="4" fill="#ffffff" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="10" y="18" fill="#b45309" font-size="10" font-weight="bold">Phase 1: Pre-Alert</text>
+      <text x="10" y="32" fill="#475569" font-size="9">Time: t = 0 to 3 s</text>
+      <text x="10" y="47" fill="#0f172a" font-size="9">85 dB Audio Chime</text>
+      <text x="10" y="60" fill="#0f172a" font-size="9">Haptic Wheel Pulse</text>
+      <text x="10" y="71" fill="#16a34a" font-size="8" font-weight="bold">Driver Override OK</text>
+    </g>
+
+    <!-- Phase 2: Escalation -->
+    <g transform="translate(10, 140)" filter="url(#card-shadow)">
+      <rect width="145" height="75" rx="4" fill="#ffffff" stroke="#ea580c" stroke-width="1.5" />
+      <text x="10" y="18" fill="#c2410c" font-size="10" font-weight="bold">Phase 2: Escalation</text>
+      <text x="10" y="32" fill="#475569" font-size="9">Time: t = 4 s</text>
+      <text x="10" y="47" fill="#0f172a" font-size="9">No Override Detected</text>
+      <text x="10" y="60" fill="#dc2626" font-size="9" font-weight="bold">ADAS Control Seized</text>
+      <text x="10" y="71" fill="#475569" font-size="8">Hazard Lights (2 Hz)</text>
+    </g>
+
+    <!-- Phase 3: Active MRM -->
+    <g transform="translate(10, 235)" filter="url(#card-shadow)">
+      <rect width="145" height="95" rx="4" fill="#ffffff" stroke="#dc2626" stroke-width="1.5" />
+      <text x="10" y="18" fill="#b91c1c" font-size="10" font-weight="bold">Phase 3: Active MRM</text>
+      <text x="10" y="32" fill="#475569" font-size="9">Time: t = 10 s</text>
+      <text x="10" y="47" fill="#0f172a" font-size="9">Decel a = -3.2 m/s²</text>
+      <text x="10" y="60" fill="#0f172a" font-size="9">Max Limit &lt;= 4.0 m/s²</text>
+      <text x="10" y="75" fill="#1d4ed8" font-size="9" font-weight="bold">Shoulder Pullover</text>
+      <text x="10" y="88" fill="#2563eb" font-size="8">ETSI DENM Broadcast</text>
+    </g>
+
+    <!-- Phase 4: Safe Stop & EMS -->
+    <g transform="translate(10, 350)" filter="url(#card-shadow)">
+      <rect width="145" height="110" rx="4" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5" />
+      <text x="10" y="18" fill="#15803d" font-size="10" font-weight="bold">Phase 4: Standstill</text>
+      <text x="10" y="32" fill="#475569" font-size="9">Time: t = 20-30 s</text>
+      <text x="10" y="47" fill="#0f172a" font-size="9">Speed == 0 km/h</text>
+      <text x="10" y="60" fill="#0f172a" font-size="9">Park Brake Clamped</text>
+      <text x="10" y="73" fill="#0f172a" font-size="9">Doors Unlocked</text>
+      <text x="10" y="88" fill="#16a34a" font-size="9.5" font-weight="bold">NG-eCall Dispatched</text>
+      <text x="10" y="101" fill="#475569" font-size="8">76-Byte MEC to PSAP</text>
+    </g>
+
+    <!-- Loop Back Indicator -->
+    <rect x="10" y="480" width="145" height="40" rx="4" fill="#f1f5f9" stroke="#94a3b8" />
+    <text x="72" y="497" text-anchor="middle" fill="#334155" font-size="9" font-weight="bold">Continuous Watchdog</text>
+    <text x="72" y="510" text-anchor="middle" fill="#64748b" font-size="8.5">Loop Period: 100 ms</text>
+  </g>
+
+</svg>
+

@@ -1,0 +1,73 @@
+{
+  "benchmark_scope": "synthetic software simulation; not clinical or vehicle certification evidence",
+  "total_trials": 50,
+  "seeds_per_scenario": 10,
+  "scenarios": [
+    "NORMAL_DRIVING",
+    "CARDIAC_SYNCOPE",
+    "EPILEPTIC_SEIZURE",
+    "OPTICAL_BLINDING_ATTACK",
+    "IMU_HARDWARE_FAULT"
+  ],
+  "classification": {
+    "labels": [
+      "Normal",
+      "Syncope",
+      "Seizure"
+    ],
+    "confusion_matrix": {
+      "Normal": {
+        "Normal": 10,
+        "Syncope": 0,
+        "Seizure": 0
+      },
+      "Syncope": {
+        "Normal": 0,
+        "Syncope": 10,
+        "Seizure": 0
+      },
+      "Seizure": {
+        "Normal": 0,
+        "Syncope": 0,
+        "Seizure": 10
+      }
+    },
+    "per_class": {
+      "Normal": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 10
+      },
+      "Syncope": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 10
+      },
+      "Seizure": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 10
+      }
+    },
+    "accuracy": 1.0,
+    "macro_f1": 1.0
+  },
+  "detection_latency_s": {
+    "count": 20,
+    "mean": 2.635,
+    "min": 2.0,
+    "max": 3.2
+  },
+  "false_positive_count": 0,
+  "false_negative_count": 0,
+  "safe_scenario_count": 30,
+  "mec_length_bytes": [
+    0,
+    76
+  ],
+  "mec_scope_note": "76 bytes generated exclusively upon verified medical crisis (syncope/seizure); suppressed (0 bytes) during normal driving and non-emergency fault modes",
+  "prototype_can_valid_count": 20
+}

@@ -1,0 +1,9 @@
+{
+    "specstory.cloudSync.enabled": "never",
+    "chat.tools.terminal.autoApprove": {
+        "/^& C:\\\\Users\\\\MI\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\python\\.exe -c \"import sys; sys\\.path\\.insert\\(0, 'prototype'\\); from plot_results import _run_scenario; from cabinguard\\.simulator import ScenarioType; d=_run_scenario\\(ScenarioType\\.EPILEPTIC_SEIZURE\\); print\\('seizure SER max:', round\\(float\\(d\\['sers'\\]\\.max\\(\\)\\),3\\)\\); print\\('persistence max:', d\\['persists'\\]\\.max\\(\\)\\); print\\('entropy min:', float\\(d\\['entropies'\\]\\.min\\(\\)\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
