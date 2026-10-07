@@ -27,7 +27,7 @@ from . import config
 from .feature_extraction import CycleFeatures
 from .fusion import CLASSES, FusionClassifier, FusionResult
 
-SMOOTH_S = 8.0
+SMOOTH_S = 2.0
 DISTRUST_S = 10.0
 SPOOF_PULSE_ABSENT = 0.8
 SPOOF_EAR_CLOSED = 0.12

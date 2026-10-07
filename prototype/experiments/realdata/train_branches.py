@@ -41,6 +41,8 @@ STEP_CARDIAC_S = 5.0
 STEP_MOTION_S = 0.5
 PERSIST_MOTION = int(2.0 / STEP_MOTION_S)
 MIN_TRAIN_AMPLITUDE_G = 0.1
+DEPLOYED_CARDIAC = "LogReg"
+DEPLOYED_MOTION = "GBDT"
 
 
 def models():
@@ -102,9 +104,12 @@ def cardiac(results: dict) -> None:
             r: bool(((pred == "Seizure") & confident & (rec == r) & (y == "Seizure")).any()) for r in events}
         out["models"][name] = entry
     results["cardiac"] = out
-    final = models()["GBDT"]().fit(X, y)
+    # Deployed model: best leave-one-record-out AUC (logistic regression).
+    # Balanced class weights make its posteriors correspond to equal priors,
+    # so the prior divided out to obtain likelihood ratios is uniform.
+    final = models()[DEPLOYED_CARDIAC]().fit(X, y)
     joblib.dump({"model": final, "features": CARDIAC_FEATURES, "classes": list(final.classes_),
-                 "train_prior": {c: float((y == c).mean()) for c in CLASSES}},
+                 "train_prior": {c: 1.0 / len(CLASSES) for c in CLASSES}},
                 ROOT / "models" / "cardiac_branch.joblib")
 
 
@@ -180,8 +185,8 @@ def motion(results: dict) -> None:
                                        for e in np.unique(ep[ai == amp])])) for amp in np.unique(ai)}
         out["locations"][loc] = loc_out
         if loc == "lh":
-            final = models()["GBDT"]().fit(X[fit_mask], y[fit_mask])
-            joblib.dump({"model": final, "features": MOTION_FEATURES, "train_prior_clonic": float(y[fit_mask].mean())},
+            final = models()[DEPLOYED_MOTION]().fit(X[fit_mask], y[fit_mask])
+            joblib.dump({"model": final, "features": MOTION_FEATURES, "train_prior_clonic": 0.5},  # balanced weights
                         ROOT / "models" / "motion_branch.joblib")
     results["motion"] = out
 

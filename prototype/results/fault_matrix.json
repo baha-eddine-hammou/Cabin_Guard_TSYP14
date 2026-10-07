@@ -12,13 +12,13 @@
       "expected": "stop on shoulder, verified MEC at PSAP",
       "passed": 10,
       "runs": 10,
-      "median_detection_latency_s": 15.3
+      "median_detection_latency_s": 11.3
     },
     "convulsive seizure": {
       "expected": "stop on shoulder, verified MEC at PSAP",
       "passed": 10,
       "runs": 10,
-      "median_detection_latency_s": 10.65
+      "median_detection_latency_s": 11.200000000000003
     },
     "sensor failure: IMU disconnect": {
       "expected": "Degraded 2, no manoeuvre",
@@ -48,7 +48,7 @@
       "expected": "gateway completes the stop",
       "passed": 10,
       "runs": 10,
-      "median_detection_latency_s": 10.600000000000001
+      "median_detection_latency_s": 11.200000000000003
     },
     "tampered CAN frames": {
       "expected": "frames rejected, alive timeout flagged",
@@ -78,19 +78,19 @@
       "expected": "MEC delivered by SMS fallback",
       "passed": 10,
       "runs": 10,
-      "median_detection_latency_s": 15.3
+      "median_detection_latency_s": 11.3
     },
     "communication failure: all bearers 60 s": {
       "expected": "stop unaffected, MEC queued then delivered",
       "passed": 10,
       "runs": 10,
-      "median_detection_latency_s": 15.3
+      "median_detection_latency_s": 11.3
     }
   },
   "cycle_compute_ms": {
-    "median": 3.387102499800676,
-    "p99": 8.11727603992038,
-    "max": 116.78843500021685,
+    "median": 2.6829920002455765,
+    "p99": 4.64147355985915,
+    "max": 65.40820800000802,
     "deadline": 100.0
   }
 }

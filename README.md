@@ -55,7 +55,7 @@ Python 3.11 or newer.
 ```
 pip install -e "prototype[dev]"
 cd prototype
-python -m pytest -q                 # 45 tests: features, fusion rules, pipeline, faults, CAN, crypto
+python -m pytest -q                 # 47 tests: features, fusion rules, pipeline, faults, CAN, crypto
 python run_demo.py                  # all scenarios
 python run_demo.py --scenario seizure
 python run_demo.py --scenario normal --attack forge
@@ -75,6 +75,8 @@ python experiments/realdata/extract_cardiac.py      # ~2 min
 python experiments/realdata/extract_motion.py       # ~2 min
 python experiments/realdata/train_branches.py       # ~7 min; writes models/ and results/branch_metrics.json
 python experiments/realdata/evaluate_fusion.py      # ~3 min; writes results/fusion_metrics.json
+python experiments/fault_matrix.py --seeds 10       # ~4 min
+python experiments/export_paper_numbers.py          # refresh ../paper_numbers.tex for the paper
 ```
 
 ## Datasets

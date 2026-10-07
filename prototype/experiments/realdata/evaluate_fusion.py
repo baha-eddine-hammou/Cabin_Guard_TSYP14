@@ -28,6 +28,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -45,6 +48,10 @@ REFRACTORY_S = 60.0
 AMPLITUDES_G = (0.1, 0.2, 0.5)
 
 
+def logreg():
+    return make_pipeline(StandardScaler(), LogisticRegression(max_iter=2000, class_weight="balanced"))
+
+
 def gbdt():
     return HistGradientBoostingClassifier(max_iter=200, learning_rate=0.1, class_weight="balanced", random_state=0)
 
@@ -56,9 +63,10 @@ def cardiac_models(records_needed):
     X, y, rec = d["X"][keep], d["y"][keep], d["record"][keep]
     out = {}
     for r in records_needed:
-        m = gbdt().fit(X[rec != r], y[rec != r])
+        m = logreg().fit(X[rec != r], y[rec != r])
+        # balanced class weights: posteriors correspond to a uniform prior
         out[r] = {"model": m, "classes": list(m.classes_),
-                  "train_prior": {c: float((y[rec != r] == c).mean()) for c in ("Normal", "Seizure", "Cardiac")}}
+                  "train_prior": {c: 1.0 / 3 for c in ("Normal", "Seizure", "Cardiac")}}
     return out
 
 
@@ -76,7 +84,7 @@ def motion_models(fold_of):
         tr_i = ~np.isin(si, list(held))
         X = np.vstack([Xr[tr_r], Xi[tr_i]])
         y = np.concatenate([np.zeros(tr_r.sum()), np.ones(tr_i.sum())])
-        out[f] = {"model": gbdt().fit(X, y), "train_prior_clonic": float(y.mean())}
+        out[f] = {"model": gbdt().fit(X, y), "train_prior_clonic": 0.5}   # balanced weights
     return out
 
 
@@ -212,7 +220,7 @@ def hold(card_X, card_t, t0, n):
 
 
 # ---------------------------------------------------------- episodes ---
-SMOOTH_S = 8.0
+SMOOTH_S = 2.0
 CONFIGS = {
     # name: (enabled branches, cap, require two sensors, evidence smoothing in s)
     "cardiac only (uncapped)": (("cardiac",), 50.0, False, SMOOTH_S),
