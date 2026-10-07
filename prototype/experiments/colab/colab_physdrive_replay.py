@@ -137,112 +137,58 @@ def download_physdrive() -> Path:
 
 
 def run_replay(project: Path, dataset: Path) -> None:
+    """Replay PhysDrive in-vehicle heart rate through the trained cardiac branch.
+
+    PhysDrive provides a reference heart-rate series per session, not beat
+    times, so beats are synthesised by integrating the rate; beat-to-beat
+    variability is therefore underestimated. The report gives how often the
+    cardiac branch on its own would exceed Gamma on real in-vehicle heart
+    rate (a standalone false-alarm indicator), not seizure or syncope
+    performance.
+    """
     sys.path.insert(0, str(project))
-    from cabinguard.feature_extraction import FeatureExtractor
-    from cabinguard.physdrive_adapter import PhysDriveAdapter
-    from cabinguard.watchdog import CrossSensorWatchdog
-
-    adapter = PhysDriveAdapter(dataset)
-    extractor = FeatureExtractor()
-    watchdog = CrossSensorWatchdog()
-
-    total = 0
-    hr_values: list[float] = []
-    modes: Counter[str] = Counter()
-    degraded_predictions: Counter[str] = Counter()
-    first_rows: list[dict[str, object]] = []
-
-    for frame in adapter.iter_frames():
-        features = extractor.process_frame(frame)
-        decision = watchdog.evaluate(features)
-        total += 1
-        hr_values.append(frame.rppg_hr_bpm)
-        modes[decision.operational_mode] += 1
-        # The HR value is real PhysDrive data. IMU, FSR, grip, eye, and pitch
-        # are unavailable in PhysDrive and are represented by explicit adapter
-        # placeholders. Therefore degraded classifier outputs are diagnostics,
-        # not medical-event labels or performance measurements.
-        degraded_predictions[decision.active_class] += 1
-        if len(first_rows) < 5:
-            first_rows.append({
-                "timestamp_s": frame.timestamp,
-                "heart_rate_bpm": frame.rppg_hr_bpm,
-                "operational_mode": decision.operational_mode,
-                "degraded_prediction": decision.active_class,
-                "imu_available": frame.imu_heartbeat_ok,
-            })
-
-    if total == 0:
-        raise RuntimeError("No PhysDrive rows were found")
-
-    # Extract sliding 10-second trajectory windows and train PhysDriveQualityModel
-    from cabinguard.dataset_models import PhysDriveQualityModel
-    from sklearn.metrics import classification_report, accuracy_score
     import numpy as np
+    from cabinguard.cardiac_features import features_for_record
+    from cabinguard.fusion import FusionClassifier
+    from cabinguard.physdrive_adapter import PhysDriveAdapter
 
-    print("Extracting sliding physiological trajectory windows for AI model training...")
-    window_len = 100  # 10s at 10 Hz
-    X_traj = []
-    y_traj = []
-    hr_arr = np.asarray(hr_values, dtype=float)
-
-    for i in range(0, len(hr_arr) - window_len + 1, 20):  # hop = 2s
-        w = hr_arr[i:i + window_len]
-        feat = PhysDriveQualityModel.extract_trajectory_features(w)
-        mean_h = feat[0]
-        # Classify state: 0: Normal (60-100), 1: Bradycardia (<55), 2: Tachycardia (>105), 3: High Instability (std > 15)
-        if feat[1] > 15.0:
-            label = 3
-        elif mean_h < 55.0:
-            label = 1
-        elif mean_h > 105.0:
-            label = 2
-        else:
-            label = 0
-        X_traj.append(feat)
-        y_traj.append(label)
-
-    model_info = {}
-    if len(X_traj) >= 10:
-        X_t = np.asarray(X_traj, dtype=float)
-        y_t = np.asarray(y_traj, dtype=int)
-        model = PhysDriveQualityModel()
-        model.fit(X_t, y_t)
-        preds = model.predict(X_t)
-        acc = float(accuracy_score(y_t, preds))
-        model_path = ROOT / "physdrive_quality_model.joblib"
-        model.save(model_path)
-        print(f"PhysDriveQualityModel trained on {len(X_t)} windows (accuracy: {acc * 100:.2f}%). Saved to {model_path}")
-        model_info = {
-            "windows_trained": len(X_t),
-            "training_accuracy": round(acc, 4),
-            "state_distribution": dict(Counter(y_traj)),
-            "saved_model_path": str(model_path),
-        }
-
+    clf = FusionClassifier(enabled=("cardiac",), cap=50.0)
+    adapter = PhysDriveAdapter(dataset)
+    sessions, windows, alarms, hr_all = 0, 0, Counter(), []
+    for session in adapter.discover_sessions():
+        frames = list(adapter.iter_session(session))
+        if len(frames) < 20:
+            continue
+        t = np.array([f.timestamp for f in frames], float)
+        hr = np.clip(np.array([f.rppg_hr_bpm for f in frames], float), 30, 220)
+        phase = np.concatenate([[0.0], np.cumsum(np.diff(t) * hr[:-1] / 60.0)])
+        beats = np.interp(np.arange(np.ceil(phase[-1])), phase, t)
+        times = np.arange(t[0] + 10.0, t[-1], 1.0)
+        if times.size == 0:
+            continue
+        feats = features_for_record(beats, times)
+        post, _ = clf.combine(clf.batch_evidence(cardiac=feats), len(feats))
+        top = post.argmax(1)
+        for k in np.flatnonzero((top != 0) & (post.max(1) >= 0.85)):
+            alarms[("Normal", "Syncope", "Seizure")[top[k]]] += 1
+        sessions += 1
+        windows += len(feats)
+        hr_all.append(hr)
+    if windows == 0:
+        raise RuntimeError("No PhysDrive sessions long enough to replay were found")
+    hr_cat = np.concatenate(hr_all)
     summary = {
-        "frames_replayed": total,
-        "real_hr_frames": total,
-        "mean_heart_rate_bpm": round(sum(hr_values) / len(hr_values), 3),
-        "min_heart_rate_bpm": round(min(hr_values), 3),
-        "max_heart_rate_bpm": round(max(hr_values), 3),
-        "operational_modes": dict(modes),
-        "degraded_predictions_unscored": dict(degraded_predictions),
-        "trained_quality_model": model_info,
-        "real_modalities_used": ["PhysDrive HR.mat heart-rate signal"],
-        "unavailable_modalities": [
-            "headrest IMU", "seatback FSR", "steering grip", "eye aspect ratio",
-            "head pitch", "raw camera rPPG estimation"
-        ],
-        "pipeline_stages_exercised": [
-            "PhysDrive adapter", "FeatureExtractor", "Degraded Mode 2 watchdog", "PhysDriveQualityModel training"
-        ],
-        "sample_rows": first_rows,
-        "scope": "real PhysDrive HR replay and stability model training; no seizure/syncope performance claim",
+        "sessions": sessions,
+        "windows_1s": windows,
+        "hours": round(windows / 3600, 3),
+        "heart_rate_bpm": {"mean": round(float(hr_cat.mean()), 2), "min": round(float(hr_cat.min()), 2),
+                           "max": round(float(hr_cat.max()), 2)},
+        "cardiac_branch_alone_confident_event_windows": dict(alarms),
+        "cardiac_branch_alone_confident_event_fraction": round(sum(alarms.values()) / windows, 5),
+        "scope": "real PhysDrive in-vehicle heart rate through the cardiac branch only; beats synthesised "
+                 "from the rate series; no seizure or syncope performance claim",
     }
-    (ROOT / "physdrive_real_pipeline_report.json").write_text(
-        json.dumps(summary, indent=2) + "\n", encoding="utf-8"
-    )
+    (ROOT / "physdrive_cardiac_branch_report.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(summary, indent=2))
 
 

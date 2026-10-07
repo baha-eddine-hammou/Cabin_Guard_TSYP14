@@ -72,6 +72,22 @@ class CabinGuardECU:
         self.failed = False
         self.event_t: float | None = None
         self.decision = None
+        self._warm_up()
+
+    def _warm_up(self) -> None:
+        """Pin inference to one thread and run the models before the deadline applies.
+
+        Multi-threaded tree inference on a single sample spends its time
+        waiting for the thread pool, and stalls whenever another process holds
+        the cores; one thread gives a short, predictable cycle.
+        """
+        from threadpoolctl import threadpool_limits
+        self._threads = threadpool_limits(limits=1)
+        from .cardiac_features import CardiacFeatures
+        from .fusion import FusionInput
+        from .motion_features import EMPTY
+        for _ in range(3):
+            self.watchdog.classifier.classify(FusionInput(CardiacFeatures(70, 0, 0.05, 0), EMPTY, 0.3, 0, 0.1, "ACTIVE"))
 
     def step(self, snap, speed_ms: float, bus: Bus, hang: bool = False):
         """One 100 ms cycle. Returns the decision, or None once the ECU has failed silent."""

@@ -1,86 +1,87 @@
-# CabinGuard-ADI submission package
+# CabinGuard-ADI
 
-CabinGuard-ADI is a Phase 1 research prototype for multimodal detection of synthetic driver incapacitation scenarios and a modeled minimum-risk response.
+In-cabin detection of acute driver incapacitation (cardiac syncope and
+convulsive seizure versus normal driving), connected to an authenticated
+minimum-risk manoeuvre and a privacy-preserving emergency call. Submission for
+the IEEE VTS TSYP14 CabinGuard-ADI challenge.
 
-## Scope and evidence
-
-The current evidence is software-only. Sensor streams are synthetic, the vehicle response is modeled in Python, and the CAN/MEC messages are prototype formats. The project does not claim clinical validation, real camera or IMU capture, CARLA/ROS2 validation, real wireless eCall or DENM transmission, production HSM/ECDSA, AUTOSAR SecOC, or certified ASIL compliance.
-
-## Environment
-
-Use Python 3.12 or newer. Install the dependencies listed in `prototype/requirements.txt` in the selected environment.
-
-## Run the demonstration
-
-From the `prototype` directory, run `python run_demo.py`. The demo exercises normal driving, syncope, seizure, optical blinding, and IMU-fault scenarios through the simulator, feature extractor, watchdog, safety controller, and prototype telematics layer.
-
-## Run regression tests
-
-Run `python test_cabinguard.py` from `prototype`. The suite covers configuration, RFC 4493 CMAC vectors, synthetic classification, degraded modes, spoof suppression, prototype CAN integrity, replay rejection, unauthorized-key rejection, and class separation.
-
-## Reproduce the benchmark
-
-Run `python evaluate_50_trials.py` from `prototype`. It uses ten deterministic seeds for each of five synthetic scenarios and writes `results/benchmark_50_trials.csv` and `results/benchmark_metrics.json`. Use `--seeds N` to change the number of seeds. The output includes a confusion matrix, per-class precision/recall/F1, latency statistics, false-positive and false-negative counts, safe-failure counts, MEC lengths, and prototype CAN verification results.
-
-## Replay PhysDrive data
-
-PhysDrive is an external academic dataset. The official repository is at
-`https://github.com/WJULYW/PhysDrive-Dataset`; its preprocessed version is also
-listed at `https://www.kaggle.com/datasets/xiaoyang274/physdrive`. Download the
-dataset separately and pass its root directory to `PhysDriveAdapter`:
-
-```python
-from cabinguard.physdrive_adapter import PhysDriveAdapter
-
-adapter = PhysDriveAdapter(r"D:\\datasets\\PhysDrive")
-for frame in adapter.iter_frames():
-	# Pass frame to FeatureExtractor, CrossSensorWatchdog, and the controller.
-	print(frame.timestamp, frame.rppg_hr_bpm, frame.imu_heartbeat_ok)
+```
+camera (eyes, head, rPPG) ─┐                                       ┌─▶ gateway ─▶ brakes, hazards, EPB
+headrest IMU ──────────────┼─▶ features ─▶ fusion ─▶ watchdog ─▶ MRM ─┤   (SecOC CAN, plausibility, alive timeout)
+seat FSR, wheel grip ──────┘   (per sensor)  (bounded)  (modes,      └─▶ eCall: signed, encrypted 76-byte MEC
+                                              evidence)  spoofing)        DENM without the etiology
 ```
 
-The adapter searches recursively for `Recording_Physiological_Data.csv` and
-replays its timestamp and heart-rate columns. It also discovers `HR.mat`-only
-sessions, as found in some PhysDrive Kaggle releases. PhysDrive does not contain CabinGuard seatback FSR, steering
-grip, or headrest IMU channels, so those fields are explicitly unavailable or
-neutral. This adapter validates real PhysDrive heart-rate replay through the
-adapter, feature extractor, and degraded-mode watchdog. Because the missing
-modalities are imputed, degraded classifier outputs are diagnostic only and
-do not establish seizure or syncope classification performance.
+## What is evidence and what is not
 
-## Real-dataset adapters
+| Claim | Evidence | Where |
+|---|---|---|
+| Pulse-rhythm branch separates VT/VF and ictal tachycardia from normal rhythm | 130 PhysioNet records (drivedb, szdb, vfdb, cudb, mitdb), leave-one-record-out | `prototype/results/branch_metrics.json` |
+| Motion branch detects clonic jerks against real road vibration | 32 subjects of real driving accelerometry, leave-one-subject-out; clonic motion injected after Conradsen et al. (2013), amplitude swept | `prototype/results/branch_metrics.json` |
+| Fused detector: false MRM starts per hour, sensitivity, latency | Composite episodes: real cardiac and motion branches, modelled eye/head/seat channels, out-of-fold models, 22 h of real driving | `prototype/results/fusion_metrics.json` |
+| Fault and attack handling | Full software pipeline with synthetic sensors, 14 cases x 10 seeds | `prototype/results/fault_matrix.json` |
 
-The first multi-dataset milestone adds provenance-aware windows through
-`cabinguard.dataset_types`:
+Not claimed: clinical validation, measured seizure motion at a vehicle seat
+(no public dataset has it), real camera rPPG in a moving vehicle, certified
+ISO 26262 / UNECE R157 compliance, an HSM, or a deployed eCall/V2X link. The
+eye, head and seat channels use expert-set likelihoods until Phase 2 data
+exists. See `hardware/README.md` for the Phase 2 bench and validation plan.
 
-- `MHealthAdapter` reads UCI MHEALTH 50 Hz logs with chest ECG, inertial
-	channels, activity labels, and subject identity.
-- `UciHarAdapter` reads UCI HAR inertial windows, activity labels, and
-	subject-disjoint metadata.
-- `PhysDriveAdapter` reads PhysDrive CSV or `HR.mat` physiological sessions.
-- `MitBihAdapter` reads MIT-BIH ECG records and preserves WFDB beat annotations.
+## Layout
 
-Official sources:
+```
+prototype/
+  cabinguard/            package: features, fusion, watchdog, MRM controller,
+                         SecOC CAN, gateway, eCall/MEC, simulator, hardware front ends
+  experiments/realdata/  PhysioNet extraction, branch training, fused evaluation
+  experiments/fault_matrix.py   failure and attack scenarios
+  experiments/colab/     auxiliary dataset scripts (MHEALTH, UCI HAR, PhysDrive, MIT-BIH)
+  models/                trained branch models (cardiac_branch, motion_branch)
+  results/               every number quoted in the paper
+  tests/                 pytest suite
+  run_demo.py            scenarios through the full pipeline
+  run_realtime.py        10 Hz real-time ECU loop (simulated or hardware sensors, CAN)
+  run_gateway.py         actuator-side gateway for the CAN bench
+  cabinguard_mrm.dbc     CAN database, bit-exact with cabinguard/can_messages.py
+hardware/                ESP32 sensor-node firmware, BOM, wiring, Phase 2 plan
+tools/check_manuscript.py   manuscript style checker (rules in CLAUDE.md)
+IEEE_Research_Paper_CabinGuard.tex   the paper
+```
 
-- UCI MHEALTH: `https://archive.ics.uci.edu/dataset/319/mhealth+dataset`
-- UCI HAR: `https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones`
-- PhysDrive: `https://github.com/WJULYW/PhysDrive-Dataset`
-- MIT-BIH Arrhythmia: `https://physionet.org/content/mitdb/1.0.0/`
+## Quick start
 
-For Colab, upload `prototype.zip` and run `colab_uci_real_datasets.py`. The
-runner downloads the official MHEALTH and UCI HAR archives, parses them with
-the adapters, and writes `uci_real_dataset_report.json`. Its metrics are
-dataset-native ingestion/activity statistics, not medical-event performance.
+Python 3.11 or newer.
 
-These datasets validate inertial, ECG, activity, and provenance handling. They
-do not provide driver syncope or seizure labels and must not be scored as the
-current `Normal`/`Syncope`/`Seizure` medical classifier.
+```
+pip install -e "prototype[dev]"
+cd prototype
+python -m pytest -q                 # 45 tests: features, fusion rules, pipeline, faults, CAN, crypto
+python run_demo.py                  # all scenarios
+python run_demo.py --scenario seizure
+python run_demo.py --scenario normal --attack forge
+python run_realtime.py --scenario syncope --can virtual
+python experiments/fault_matrix.py --seeds 10
+```
 
-For MIT-BIH, install the optional `wfdb` dependency and run
-`colab_mitbih_replay.py` in Colab. The runner streams records `100` and `101`
-from PhysioNet, reports ECG windows and beat-annotation symbols, and writes
-`mitbih_real_pipeline_report.json`. MIT-BIH results validate ECG and
-arrhythmia preprocessing only; arrhythmia is not syncope.
+## Reproduce the real-data results
 
-## Submission limitations
+The datasets are downloaded from PhysioNet (official site, or its AWS open
+data mirror when the site is unreachable) into `data/`, which git ignores.
 
-The benchmark is not a clinical study and should not be interpreted as sensitivity, specificity, or regulatory evidence. Thresholds are literature-informed engineering assumptions. The target architecture still requires real-sensor validation, approved vehicle or simulator integration, security-key provisioning, production message security, privacy/legal review, and safety-case development.
+```
+cd prototype
+python -m cabinguard.physionet_fetch drivedb szdb vfdb cudb mitdb accelerometry-walk-climb-drive
+python experiments/realdata/extract_cardiac.py      # ~2 min
+python experiments/realdata/extract_motion.py       # ~2 min
+python experiments/realdata/train_branches.py       # ~7 min; writes models/ and results/branch_metrics.json
+python experiments/realdata/evaluate_fusion.py      # ~3 min; writes results/fusion_metrics.json
+```
+
+## Datasets
+
+All open access on PhysioNet (Goldberger et al., Circulation 2000):
+Stress Recognition in Automobile Drivers (drivedb), Post-Ictal Heart Rate
+Oscillations in Partial Epilepsy (szdb), MIT-BIH Malignant Ventricular
+Ectopy (vfdb), CU Ventricular Tachyarrhythmia (cudb), MIT-BIH Arrhythmia
+(mitdb), and Labeled raw accelerometry data captured during walking, stair
+climbing and driving. Each keeps its own licence; none is redistributed here.
