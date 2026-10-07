@@ -1,0 +1,96 @@
+{
+  "scope": "synthetic sensor signals through the full software pipeline",
+  "seeds": 10,
+  "cases": {
+    "normal driving": {
+      "expected": "no manoeuvre",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "cardiac syncope": {
+      "expected": "stop on shoulder, verified MEC at PSAP",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": 15.3
+    },
+    "convulsive seizure": {
+      "expected": "stop on shoulder, verified MEC at PSAP",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": 10.65
+    },
+    "sensor failure: IMU disconnect": {
+      "expected": "Degraded 2, no manoeuvre",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "missing data: seat sensor stale": {
+      "expected": "seat branch dropped, no manoeuvre",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "tampered data: optical blinding": {
+      "expected": "camera distrusted, no manoeuvre",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "processing failure, driver driving": {
+      "expected": "fail silent, driver warned",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "processing failure during MRM": {
+      "expected": "gateway completes the stop",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": 10.600000000000001
+    },
+    "tampered CAN frames": {
+      "expected": "frames rejected, alive timeout flagged",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "replayed CAN frames": {
+      "expected": "every replay rejected",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "unauthorized key": {
+      "expected": "every forged frame rejected",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "unauthorized command, valid MAC": {
+      "expected": "plausibility gate rejects",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": null
+    },
+    "communication failure: cellular down": {
+      "expected": "MEC delivered by SMS fallback",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": 15.3
+    },
+    "communication failure: all bearers 60 s": {
+      "expected": "stop unaffected, MEC queued then delivered",
+      "passed": 10,
+      "runs": 10,
+      "median_detection_latency_s": 15.3
+    }
+  },
+  "cycle_compute_ms": {
+    "median": 3.387102499800676,
+    "p99": 8.11727603992038,
+    "max": 116.78843500021685,
+    "deadline": 100.0
+  }
+}
