@@ -1,9 +1,9 @@
 """Download open-access PhysioNet databases into a local data directory.
 
-The official host (physionet.org) is tried first; when it is unreachable the
-AWS Open Data mirror of the same files (``physionet-open`` bucket) is used.
-Both serve byte-identical releases, and every download is checked against the
-release's ``SHA256SUMS.txt`` when that file is present.
+The AWS Open Data mirror (``physionet-open`` bucket) is tried first because
+it is usually much faster; physionet.org is the fallback. Both serve
+byte-identical releases, and every download is checked against the release's
+``SHA256SUMS.txt`` when that file is present. Progress is printed per file.
 
 Usage::
 
@@ -41,8 +41,10 @@ def _get(url: str, timeout: float = 60.0) -> bytes:
 
 
 def _fetch(db: str, ver: str, name: str) -> bytes:
+    # The AWS mirror serves the same release files and is usually much
+    # faster than physionet.org; checksums are verified either way.
     errors = []
-    for template in (OFFICIAL, MIRROR):
+    for template in (MIRROR, OFFICIAL):
         url = template.format(db=db, ver=ver, name=name)
         try:
             return _get(url)
@@ -98,7 +100,8 @@ def fetch_database(db: str, dest: Path, pattern: str | None = None, workers: int
         return "downloaded"
 
     with ThreadPoolExecutor(max_workers=workers) as pool:
-        list(pool.map(one, names))
+        for i, (name, status) in enumerate(zip(names, pool.map(one, names)), 1):
+            print(f"  {db}: {i}/{len(names)} {status} {name}", flush=True)
     return out_dir
 
 
