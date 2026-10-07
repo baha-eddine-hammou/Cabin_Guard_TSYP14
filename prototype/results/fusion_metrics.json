@@ -216,7 +216,7 @@
         "Syncope": {
           "n": 80,
           "detected": 0,
-          "wrong_class": 1,
+          "wrong_class": 0,
           "pre_onset_false": 2,
           "sensitivity": 0.0,
           "median_latency_s": null,
@@ -313,10 +313,10 @@
       }
     },
     "camera lost (motion + posture)": {
-      "false_mrm_per_hour": 0.18039461321641093,
+      "false_mrm_per_hour": 0.1352959599123082,
       "driving_hours": 22.173611111111107,
       "false_by_class": {
-        "Seizure": 4
+        "Seizure": 3
       },
       "events": {
         "Seizure@0.1g": {
@@ -454,12 +454,12 @@
       "events": {
         "Seizure@0.1g": {
           "n": 10,
-          "detected": 5,
+          "detected": 6,
           "wrong_class": 0,
           "pre_onset_false": 0,
-          "sensitivity": 0.5,
-          "median_latency_s": 13.5,
-          "p90_latency_s": 22.1
+          "sensitivity": 0.6,
+          "median_latency_s": 15.75,
+          "p90_latency_s": 22.0
         },
         "Seizure@0.2g": {
           "n": 10,
@@ -570,7 +570,7 @@
         "Syncope": {
           "n": 80,
           "detected": 0,
-          "wrong_class": 1,
+          "wrong_class": 0,
           "pre_onset_false": 2,
           "sensitivity": 0.0,
           "median_latency_s": null,
@@ -598,7 +598,7 @@
           "wrong_class": 0,
           "pre_onset_false": 0,
           "sensitivity": 1.0,
-          "median_latency_s": 15.5,
+          "median_latency_s": 14.25,
           "p90_latency_s": 18.25
         },
         "Seizure@0.5g": {
@@ -634,7 +634,7 @@
           "wrong_class": 0,
           "pre_onset_false": 0,
           "sensitivity": 0.6,
-          "median_latency_s": 18.5,
+          "median_latency_s": 17.75,
           "p90_latency_s": 23.25
         },
         "Seizure@0.2g": {
@@ -723,7 +723,7 @@
           "pre_onset_false": 0,
           "sensitivity": 0.6,
           "median_latency_s": 20.5,
-          "p90_latency_s": 25.0
+          "p90_latency_s": 24.75
         },
         "Seizure@0.2g": {
           "n": 10,

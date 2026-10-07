@@ -100,36 +100,36 @@
       "GBDT": {
         "confusion": [
           [
-            47656,
-            1249,
-            2098
+            47659,
+            1256,
+            2088
           ],
           [
-            61,
+            67,
             91,
-            14
+            8
           ],
           [
-            223,
-            60,
-            2238
+            216,
+            63,
+            2242
           ]
         ],
         "recall": {
-          "Normal": 0.9343764092308295,
+          "Normal": 0.9344352293002373,
           "Seizure": 0.5481927710843374,
-          "Cardiac": 0.8877429591431971
+          "Cardiac": 0.8893296310987703
         },
         "auc_ovr": {
-          "Normal": 0.9193681813896234,
-          "Seizure": 0.7895764359283033,
-          "Cardiac": 0.9358481952560016
+          "Normal": 0.9227048868255093,
+          "Seizure": 0.8271372238824515,
+          "Cardiac": 0.9392888321034384
         },
-        "window_alarm_rate_drive": 0.08158668585371957,
-        "drive_false_alarms_per_hour": 2.027153850966652,
+        "window_alarm_rate_drive": 0.08321341425264343,
+        "drive_false_alarms_per_hour": 2.3424888944503532,
         "recall_at_gamma": {
-          "Seizure": 0.3192771084337349,
-          "Cardiac": 0.8536295120983737
+          "Seizure": 0.3433734939759036,
+          "Cardiac": 0.8667195557318524
         },
         "per_record_seizure_hit": {
           "sz01": true,
@@ -137,7 +137,7 @@
           "sz03": true,
           "sz04": true,
           "sz05": false,
-          "sz06": true,
+          "sz06": false,
           "sz07": true
         }
       }
@@ -149,7 +149,7 @@
         "driving_hours": 10.367777777777778,
         "models": {
           "GaussianNB": {
-            "auc_drive_vs_clonic": 0.8614675282238006,
+            "auc_drive_vs_clonic": 0.8614675282238007,
             "false_alarms": {
               "driving": {
                 "false_alarms_per_hour": 7.041045975779658,
@@ -206,7 +206,7 @@
             }
           },
           "LogReg": {
-            "auc_drive_vs_clonic": 0.8183384722774779,
+            "auc_drive_vs_clonic": 0.8183384722774778,
             "false_alarms": {
               "driving": {
                 "false_alarms_per_hour": 9.163005036973528,
@@ -263,26 +263,26 @@
             }
           },
           "GBDT": {
-            "auc_drive_vs_clonic": 0.8572940942254624,
+            "auc_drive_vs_clonic": 0.8565279856967363,
             "false_alarms": {
               "driving": {
-                "false_alarms_per_hour": 4.822634229986067,
-                "window_rate": 0.025171471439288395,
+                "false_alarms_per_hour": 4.533276176186903,
+                "window_rate": 0.02568052727467581,
                 "hours": 10.367777777777778
               },
               "walking": {
                 "false_alarms_per_hour": 0.0,
-                "window_rate": 0.0007101584944639917,
+                "window_rate": 0.0006455986313309016,
                 "hours": 4.302638888888889
               },
               "stairs_up": {
                 "false_alarms_per_hour": 1.4625228519195612,
-                "window_rate": 0.002843794434288036,
+                "window_rate": 0.0032500507820434695,
                 "hours": 0.68375
               },
               "stairs_down": {
                 "false_alarms_per_hour": 0.0,
-                "window_rate": 0.0008543357539513029,
+                "window_rate": 0.00149508756941478,
                 "hours": 0.6502777777777777
               },
               "clapping": {
@@ -293,17 +293,17 @@
             },
             "sensitivity_by_amplitude_g": {
               "0.02": {
-                "episode_sensitivity": 0.04938271604938271,
-                "median_latency_s": 9.0,
+                "episode_sensitivity": 0.046296296296296294,
+                "median_latency_s": 8.5,
                 "episodes": 324
               },
               "0.05": {
-                "episode_sensitivity": 0.07407407407407407,
-                "median_latency_s": 6.5,
+                "episode_sensitivity": 0.07716049382716049,
+                "median_latency_s": 3.5,
                 "episodes": 324
               },
               "0.1": {
-                "episode_sensitivity": 0.9074074074074074,
+                "episode_sensitivity": 0.904320987654321,
                 "median_latency_s": 3.0,
                 "episodes": 324
               },
@@ -453,26 +453,26 @@
             }
           },
           "GBDT": {
-            "auc_drive_vs_clonic": 0.7910304223559621,
+            "auc_drive_vs_clonic": 0.79133427992648,
             "false_alarms": {
               "driving": {
-                "false_alarms_per_hour": 6.172971814382167,
-                "window_rate": 0.027408637873754152,
+                "false_alarms_per_hour": 5.0155395991855105,
+                "window_rate": 0.027140713749866038,
                 "hours": 10.367777777777778
               },
               "walking": {
                 "false_alarms_per_hour": 0.23241550727912458,
-                "window_rate": 0.0027115142515897867,
+                "window_rate": 0.002001355757125795,
                 "hours": 4.302638888888889
               },
               "stairs_up": {
                 "false_alarms_per_hour": 1.4625228519195612,
-                "window_rate": 0.0042656916514320535,
+                "window_rate": 0.0034531789559211863,
                 "hours": 0.68375
               },
               "stairs_down": {
                 "false_alarms_per_hour": 0.0,
-                "window_rate": 0.0017086715079026058,
+                "window_rate": 0.0012815036309269544,
                 "hours": 0.6502777777777777
               },
               "clapping": {
@@ -483,27 +483,27 @@
             },
             "sensitivity_by_amplitude_g": {
               "0.02": {
-                "episode_sensitivity": 0.040123456790123455,
-                "median_latency_s": 10.0,
+                "episode_sensitivity": 0.046296296296296294,
+                "median_latency_s": 9.5,
                 "episodes": 324
               },
               "0.05": {
-                "episode_sensitivity": 0.1111111111111111,
+                "episode_sensitivity": 0.08950617283950617,
                 "median_latency_s": 4.5,
                 "episodes": 324
               },
               "0.1": {
-                "episode_sensitivity": 0.4506172839506173,
+                "episode_sensitivity": 0.4567901234567901,
                 "median_latency_s": 3.0,
                 "episodes": 324
               },
               "0.2": {
-                "episode_sensitivity": 0.9444444444444444,
+                "episode_sensitivity": 0.9506172839506173,
                 "median_latency_s": 2.5,
                 "episodes": 324
               },
               "0.5": {
-                "episode_sensitivity": 1.0,
+                "episode_sensitivity": 0.9969135802469136,
                 "median_latency_s": 2.5,
                 "episodes": 324
               }

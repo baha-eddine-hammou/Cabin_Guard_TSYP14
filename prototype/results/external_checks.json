@@ -1,0 +1,162 @@
+{
+  "epilepsy": {
+    "source": "UEA Epilepsy (Villar et al.), wrist accelerometer, 16 Hz, healthy actors",
+    "transfer": {
+      "EPILEPSY": {
+        "series": 34,
+        "fired": 3,
+        "rate": 0.08823529411764706
+      },
+      "RUNNING": {
+        "series": 37,
+        "fired": 0,
+        "rate": 0.0
+      },
+      "SAWING": {
+        "series": 30,
+        "fired": 0,
+        "rate": 0.0
+      },
+      "WALKING": {
+        "series": 37,
+        "fired": 1,
+        "rate": 0.02702702702702703
+      }
+    },
+    "within_dataset": {
+      "EPILEPSY": {
+        "series": 34,
+        "fired": 33,
+        "rate": 0.9705882352941176
+      },
+      "RUNNING": {
+        "series": 37,
+        "fired": 0,
+        "rate": 0.0
+      },
+      "SAWING": {
+        "series": 30,
+        "fired": 0,
+        "rate": 0.0
+      },
+      "WALKING": {
+        "series": 37,
+        "fired": 0,
+        "rate": 0.0
+      }
+    },
+    "within_dataset_auc_series": 1.0
+  },
+  "mhealth": {
+    "source": "UCI MHEALTH, chest accelerometer, 50 Hz",
+    "by_activity": {
+      "standing": {
+        "windows": 1190,
+        "confident": 3,
+        "alarms": 0,
+        "hours": 0.17066666666666672
+      },
+      "sitting": {
+        "windows": 1190,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.17066666666666672
+      },
+      "lying": {
+        "windows": 1190,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.17066666666666672
+      },
+      "walking": {
+        "windows": 1190,
+        "confident": 145,
+        "alarms": 4,
+        "hours": 0.17066666666666672
+      },
+      "waist bends": {
+        "windows": 1098,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.15730555555555553
+      },
+      "arm elevation": {
+        "windows": 1142,
+        "confident": 20,
+        "alarms": 0,
+        "hours": 0.16356111111111113
+      },
+      "knee bends": {
+        "windows": 1139,
+        "confident": 6,
+        "alarms": 0,
+        "hours": 0.1629833333333333
+      },
+      "cycling": {
+        "windows": 1190,
+        "confident": 718,
+        "alarms": 10,
+        "hours": 0.17066666666666672
+      },
+      "jogging": {
+        "windows": 1190,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.17066666666666672
+      },
+      "running": {
+        "windows": 1190,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.17066666666666672
+      },
+      "jumping": {
+        "windows": 376,
+        "confident": 0,
+        "alarms": 0,
+        "hours": 0.05745555555555555
+      },
+      "climbing stairs": {
+        "windows": 1170,
+        "confident": 6,
+        "alarms": 0,
+        "hours": 0.17066666666666674
+      }
+    }
+  },
+  "har": {
+    "source": "UCI HAR, waist smartphone, total acceleration, 50 Hz",
+    "by_activity": {
+      "standing": {
+        "windows": 1906,
+        "confident": 16,
+        "window_rate": 0.008394543546694649
+      },
+      "sitting": {
+        "windows": 1777,
+        "confident": 2,
+        "window_rate": 0.0011254924029262803
+      },
+      "lying": {
+        "windows": 1944,
+        "confident": 7,
+        "window_rate": 0.00360082304526749
+      },
+      "walking": {
+        "windows": 1722,
+        "confident": 14,
+        "window_rate": 0.008130081300813009
+      },
+      "downstairs": {
+        "windows": 1406,
+        "confident": 1,
+        "window_rate": 0.0007112375533428165
+      },
+      "upstairs": {
+        "windows": 1544,
+        "confident": 5,
+        "window_rate": 0.003238341968911917
+      }
+    }
+  }
+}
