@@ -79,6 +79,18 @@ python experiments/fault_matrix.py --seeds 10       # ~4 min
 python experiments/export_paper_numbers.py          # refresh ../paper_numbers.tex for the paper
 ```
 
+## Run the training on Google Colab
+
+Open `prototype/experiments/colab/CabinGuard_Colab.ipynb` in Colab
+(File > Upload notebook, or open it from GitHub). It clones this branch,
+downloads every dataset, reruns all experiments, adds the checks that need open
+internet (UEA Epilepsy seizure mimics, UCI MHEALTH and HAR, optionally
+PhysDrive from Kaggle), and downloads a zip with the new `models/`,
+`results/` and `paper_numbers.tex`. The older scripts in
+`experiments/colab/` (`colab_uci_real_datasets.py`, `colab_mitbih_replay.py`)
+train activity and beat classifiers that the detector does not use; they are
+kept for reference only.
+
 ## Datasets
 
 All open access on PhysioNet (Goldberger et al., Circulation 2000):
@@ -87,3 +99,7 @@ Oscillations in Partial Epilepsy (szdb), MIT-BIH Malignant Ventricular
 Ectopy (vfdb), CU Ventricular Tachyarrhythmia (cudb), MIT-BIH Arrhythmia
 (mitdb), and Labeled raw accelerometry data captured during walking, stair
 climbing and driving. Each keeps its own licence; none is redistributed here.
+
+Downloaded only in Colab: UEA Epilepsy (timeseriesclassification.com),
+UCI MHEALTH (dataset 319) and UCI HAR (dataset 240), both CC BY 4.0, and
+PhysDrive (Kaggle `xiaoyang274/physdrive`, subject to its release agreement).
