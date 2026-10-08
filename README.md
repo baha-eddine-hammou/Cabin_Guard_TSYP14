@@ -66,15 +66,17 @@ python experiments/fault_matrix.py --seeds 10
 ## Reproduce the real-data results
 
 The datasets are downloaded from PhysioNet (official site, or its AWS open
-data mirror when the site is unreachable), timeseriesclassification.com (UEA
-Epilepsy) and the UCI repository (MHEALTH, HAR) into `data/`, which git ignores.
+data mirror when the site is unreachable), OpenNeuro (SeizeIT2, ds005873, CC0),
+timeseriesclassification.com (UEA Epilepsy) and the UCI repository (MHEALTH,
+HAR) into `data/`, which git ignores.
 
 ```
 cd prototype
 python -m cabinguard.physionet_fetch drivedb szdb vfdb cudb mitdb accelerometry-walk-climb-drive
 python experiments/realdata/extract_cardiac.py      # ~2 min
 python experiments/realdata/extract_motion.py       # ~2 min
-python experiments/realdata/extract_motion.py --bandlimited   # ~1 min; 16 Hz-bandwidth copies
+python experiments/realdata/extract_motion.py --branch        # ~2 min; windows as the motion branch sees them
+python experiments/realdata/extract_seizeit2.py               # ~30 min; SeizeIT2 seizure minutes (OpenNeuro)
 python experiments/realdata/train_branches.py       # ~7 min; cardiac branch, injected-jerk motion baseline
 python experiments/realdata/train_motion_real.py    # ~2 min; downloads UEA Epilepsy, MHEALTH, HAR (~140 MB)
                                                     # writes models/motion_branch.joblib, results/motion_real.json

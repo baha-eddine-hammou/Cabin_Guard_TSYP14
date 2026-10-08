@@ -16,7 +16,7 @@ import numpy as np
 from . import config
 from .cardiac_features import CardiacFeatureTracker, CardiacFeatures
 from .fusion import FusionInput
-from .motion_features import MotionFeatures, motion_features
+from .motion_features import MotionFeatures, branch_features, motion_features
 
 MAX_SENSOR_AGE_S = 0.3
 IMU_FS = 100.0
@@ -42,8 +42,18 @@ class CycleFeatures:
                                      ("fsr", self.seat_ok), ("grip", self.seat_ok)) if ok)
 
 
+def deployed_motion_input() -> str:
+    """Which features the deployed motion model was trained on: ``branch_features`` (low-passed
+    windows) or, for models saved before that key existed, ``motion_features``."""
+    from .fusion import _load
+    model = _load("motion_branch.joblib")
+    return (model or {}).get("input", "motion_features")
+
+
 class FeatureExtractor:
-    def __init__(self):
+    def __init__(self, motion_input: str | None = None):
+        kind = motion_input or deployed_motion_input()
+        self._motion = branch_features if kind == "branch_features" else motion_features
         self.cardiac = CardiacFeatureTracker()
         self.fsr_hist: deque = deque(maxlen=PSI_WINDOW)
 
@@ -61,7 +71,7 @@ class FeatureExtractor:
         for b in s.new_beats:
             self.cardiac.add_beat(b)
         cardiac = self.cardiac.features(t) if camera_ok else None
-        motion = motion_features(s.imu_window_g, IMU_FS) if imu_ok else None
+        motion = self._motion(s.imu_window_g, IMU_FS) if imu_ok else None
         psi = None
         if seat_ok:
             self.fsr_hist.append(s.fsr_pressure)

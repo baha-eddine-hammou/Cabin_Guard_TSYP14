@@ -13,6 +13,12 @@ read off the spectrum and the autocorrelation:
   (2-6.7 Hz periods), power-weighted across axes. Clonic jerks repeat; road
   vibration is broadband and does not;
 * ``peakiness``: peak over mean of the 2-6 Hz spectrum.
+
+The motion branch sees every window through ``branch_features``: a causal
+fourth-order Butterworth low-pass at ``BRANCH_LOWPASS_HZ`` first, so that the
+training recordings (sampled at 16, 25, 50 and 100 Hz) and the 100 Hz headrest
+sensor present the same bandwidth; the clonic band, 2-6 Hz, loses at most
+1.1 dB.
 """
 from __future__ import annotations
 
@@ -24,6 +30,7 @@ from scipy import signal
 G = 9.80665
 BAND = (2.0, 6.0)
 TOTAL = (0.5, 20.0)
+BRANCH_LOWPASS_HZ = 7.0
 FEATURE_NAMES = ("ser", "log_band_rms", "peak_hz", "log_total_rms", "rhythmicity", "peakiness")
 
 
@@ -102,3 +109,25 @@ def clonic_waveform(duration_s: float, fs: float, amplitude_g: float, sp0_s: flo
         t += discharge_s + sp0_s * np.exp(sp_growth * k)
         k += 1
     return out
+
+
+def lowpass(acc_g: np.ndarray, fs: float, cutoff_hz: float = BRANCH_LOWPASS_HZ) -> np.ndarray:
+    """Causal low-pass of an (n, 3) window, started from its first sample (no step transient)."""
+    x = np.asarray(acc_g, float)
+    sos = signal.butter(4, cutoff_hz, fs=fs, output="sos")
+    zi = signal.sosfilt_zi(sos)[:, :, None] * x[0][None, None, :]
+    return signal.sosfilt(sos, x, axis=0, zi=zi)[0]
+
+
+def branch_features(acc_g: np.ndarray, fs: float) -> MotionFeatures:
+    """Features as the motion branch sees them: low-passed, then ``motion_features``."""
+    if acc_g is None or len(acc_g) < int(fs) or not np.any(acc_g):
+        return EMPTY
+    return motion_features(lowpass(acc_g, fs), fs)
+
+
+def branch_windows(acc_g: np.ndarray, fs: float, win_s: float = 2.0, step_s: float = 0.5) -> np.ndarray:
+    """Branch feature vectors of every ``win_s`` window every ``step_s``, each filtered on its own as at runtime."""
+    win, step = int(win_s * fs), int(step_s * fs)
+    return np.array([branch_features(acc_g[i:i + win], fs).vector()
+                     for i in range(0, len(acc_g) - win + 1, step)]).reshape(-1, len(FEATURE_NAMES))

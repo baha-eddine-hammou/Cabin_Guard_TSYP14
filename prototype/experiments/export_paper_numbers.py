@@ -63,12 +63,15 @@ def main() -> None:
     for cfg, tag in names.items():
         s = f["configs"][cfg]
         macros[f"Fa{tag}"] = fmt(s["false_mrm_per_hour"], 2)
-        # Seizure episodes: recorded mimics, and modelled jerk trains at every amplitude.
-        rec = s["events"]["Seizure@mimic"]
-        mod = [s["events"][k] for k in s["events"] if k.startswith("Seizure@") and k != "Seizure@mimic"]
+        # Seizure episodes: clinical seizure motion (SeizeIT2) when evaluated, recorded mimics,
+        # and modelled jerk trains at every amplitude.
+        ev = s["events"]
+        rec = ev.get("Seizure@clinical", ev["Seizure@mimic"])
+        mod = [ev[k] for k in ev if k.startswith("Seizure@") and k[8:9].isdigit()]
         sz = [rec] + mod
-        sy = s["events"]["Syncope"]
+        sy = ev["Syncope"]
         macros[f"Sz{tag}"] = f"{rec['detected']}/{rec['n']}"
+        macros[f"SzMim{tag}"] = f"{ev['Seizure@mimic']['detected']}/{ev['Seizure@mimic']['n']}"
         macros[f"SzMod{tag}"] = f"{sum(e['detected'] for e in mod)}/{sum(e['n'] for e in mod)}"
         macros[f"Sy{tag}"] = f"{sy['detected']}/{sy['n']}"
         macros[f"LatSz{tag}"] = fmt(rec["median_latency_s"], 1) if rec["median_latency_s"] is not None else "--"
@@ -82,7 +85,7 @@ def main() -> None:
         macros["FaFullUpper"] = fmt(3.0 / full["driving_hours"], 2)
     macros["NSyncopeEp"] = str(full["events"]["Syncope"]["n"])
     macros["PctSyFull"] = fmt(full["events"]["Syncope"]["p90_latency_s"], 1)
-    macros["PctSzFull"] = fmt(full["events"]["Seizure@mimic"]["p90_latency_s"], 1)
+    macros["PctSzFull"] = fmt(full["events"].get("Seizure@clinical", full["events"]["Seizure@mimic"])["p90_latency_s"], 1)
     for amp, tag in (("0.1", "Ten"), ("0.2", "Twenty"), ("0.5", "Fifty")):
         e = full["events"][f"Seizure@{amp}g"]
         macros[f"SzFull{tag}"] = f"{e['detected']}/{e['n']}"
@@ -114,14 +117,15 @@ def motion_real() -> dict[str, str]:
     """The deployed motion branch, trained on recorded motion (results/motion_real.json)."""
     r = json.loads((RES / "motion_real.json").read_text())
     m: dict[str, str] = {}
-    acc = r["accelerometry"]
+    cv = r.get("cross_validation", r)        # results saved before SeizeIT2 have no cross_validation key
+    acc = cv["accelerometry"]
     m["MrDriveHours"] = fmt(acc["lh"]["driving"]["hours"], 1)
     m["MrDriveHip"] = str(acc["lh"]["driving"]["alarms"])
     m["MrDriveHipFA"] = fmt(acc["lh"]["driving"]["alarms_per_hour"], 1)
     m["MrDriveWrist"] = str(acc["lw"]["driving"]["alarms"])
     m["MrGaitMaxFA"] = fmt(max(v["alarms_per_hour"] for loc in acc.values() for a, v in loc.items()
                                 if a != "driving"), 0)
-    mh = r["mhealth"]
+    mh = cv["mhealth"]
     m["MrMhAlarms"] = str(sum(v["alarms"] for v in mh.values()))
     m["MrMhMin"] = fmt(sum(v["hours"] for v in mh.values()) * 60, 0)
     m["MrCyclingAlarms"] = str(mh["cycling"]["alarms"])
@@ -134,7 +138,33 @@ def motion_real() -> dict[str, str]:
     m["MrEpiAuc"] = fmt(r["epilepsy_test_auc_series"], 2)
     m["MrHarMax"] = fmt(100 * max(v["window_rate"] for v in r["har"].values()), 2)
     for amp, tag in (("0.05", "Five"), ("0.1", "Ten"), ("0.2", "Twenty"), ("0.5", "Fifty")):
-        m[f"MrInj{tag}"] = fmt(r["injected_clonic_lh"][amp]["sensitivity"], 2)
+        m[f"MrInj{tag}"] = fmt(cv["injected_clonic_lh"][amp]["sensitivity"], 2)
+    if "seizeit2" in cv:
+        m.update(_seizeit2(cv["seizeit2"], "MrSz"))
+        alt = r["cross_validation_without_mhealth"]
+        m.update(_seizeit2(alt["seizeit2"], "MrNoMhSz"))
+        m["MrNoMhDriveHipFA"] = fmt(alt["accelerometry"]["lh"]["driving"]["alarms_per_hour"], 1)
+        m["MrNoMhDriveWristFA"] = fmt(alt["accelerometry"]["lw"]["driving"]["alarms_per_hour"], 1)
+        m["MrNoMhMhAlarms"] = str(sum(v["alarms"] for v in alt["mhealth"].values()))
+        m["MrNoMhRunningAlarms"] = str(alt["mhealth"]["running"]["alarms"])
+        m["MrNoMhCyclingAlarms"] = str(alt["mhealth"]["cycling"]["alarms"])
+        m["MrDriveWristFA"] = fmt(acc["lw"]["driving"]["alarms_per_hour"], 1)
+    return m
+
+
+def _seizeit2(s: dict, prefix: str) -> dict[str, str]:
+    """Per-type detection on held-out SeizeIT2 patients, and alarms per hour of patient background."""
+    m = {}
+    for group, tag in (("convulsive", "Conv"), ("hyperkinetic", "Hyper"), ("tonic or clonic", "Tonic"),
+                       ("automatisms", "Auto"), ("non-motor", "NonMotor"), ("unclassified", "Unclass")):
+        e = s[group]
+        m[f"{prefix}{tag}"] = f"{e['detected']}/{e['seizures']}"
+        m[f"{prefix}{tag}Lat"] = fmt(e["median_latency_s"], 0) if e["median_latency_s"] is not None else "--"
+    m[f"{prefix}ConvPatients"] = str(s["convulsive"]["patients"])
+    bg = s["background"]
+    m[f"{prefix}BgFA"] = fmt(bg["alarms_per_hour"], 2)
+    m[f"{prefix}BgHours"] = fmt(bg["hours"], 0)
+    m[f"{prefix}BgPatients"] = str(bg["patients"])
     return m
 
 

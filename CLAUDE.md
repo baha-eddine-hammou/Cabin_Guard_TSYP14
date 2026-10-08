@@ -131,6 +131,11 @@ each drop their `(a)`/`(b)` label, since rule 13 applies to sub-panels only.
 
 ## Code and repository
 
+- Heavy compute runs in the user's Google Colab notebook
+  (`prototype/experiments/colab/CabinGuard_Colab.ipynb`), never in the Claude
+  session: no training, evaluation, feature extraction or dataset download
+  here. Follow `.claude/skills/colab-compute/SKILL.md`.
+
 - `prototype/` is the only Python package root. Scripts that produce paper
   numbers live in `prototype/experiments/` and write to `prototype/results/`.
 - Raw datasets are never committed. Loaders download them into

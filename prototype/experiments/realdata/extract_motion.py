@@ -12,11 +12,12 @@ Two products, both in ``data/derived/``:
   silent period are swept because no public recording measures clonic motion
   at a vehicle seat or headrest.
 
-With ``--bandlimited`` only the real windows are written, for the hip and
-wrist sensors, after every 100 Hz series is resampled to 16 Hz and back
-(``motion_real_bl.npz``). The recorded seizure mimics used in training are
-sampled at 16 Hz, so the 100 Hz data also enter training at that bandwidth and
-the sampling rate cannot separate the classes.
+With ``--branch`` the same products are written as the deployed motion branch
+sees them (``branch_windows``: each window low-passed on its own, as at
+runtime), for the hip and wrist sensors (``motion_real_branch.npz``,
+``motion_injected_branch.npz``). The training recordings are sampled between
+16 and 100 Hz, and the common low-pass keeps the sampling rate from separating
+the classes.
 """
 from __future__ import annotations
 
@@ -30,8 +31,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from cabinguard.motion_features import clonic_waveform, motion_features  # noqa: E402
-from scipy import signal  # noqa: E402
+from cabinguard.motion_features import branch_windows, clonic_waveform, motion_features  # noqa: E402
 
 DATA = Path(__file__).resolve().parents[3] / "data"
 SRC = DATA / "accelerometry-walk-climb-drive" / "raw_accelerometry_data"
@@ -54,14 +54,9 @@ def _segments(activity: np.ndarray):
     return [(int(activity[a]), a, b) for a, b in zip(starts, stops)]
 
 
-def bandlimit(acc: np.ndarray) -> np.ndarray:
-    """A 100 Hz series as a 16 Hz sensor would record it, back at 100 Hz."""
-    return signal.resample_poly(signal.resample_poly(acc, 4, 25, axis=0), 25, 4, axis=0)[: len(acc)]
-
-
 def _window_feats(acc: np.ndarray, limit: bool = False):
     if limit:
-        acc = bandlimit(acc)
+        return branch_windows(acc, FS)
     return np.array([motion_features(acc[i:i + WIN], FS).vector()
                      for i in range(0, acc.shape[0] - WIN + 1, STEP)])
 
@@ -81,7 +76,7 @@ def subject(path: Path, seed: int, limit: bool = False):
     inj = []
     rng = np.random.default_rng(seed)
     drive = [(a, b) for code, a, b in _segments(act) if code == 4 and b - a >= EXCERPT_S * FS]
-    if drive and not limit:
+    if drive:
         n = int(EXCERPT_S * FS)
         for k in range(EXCERPTS_PER_SUBJECT):
             a, b = drive[rng.integers(len(drive))]
@@ -104,13 +99,13 @@ def subject(path: Path, seed: int, limit: bool = False):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--workers", type=int, default=4)
-    ap.add_argument("--bandlimited", action="store_true", help="real hip and wrist windows at 16 Hz bandwidth")
+    ap.add_argument("--branch", action="store_true", help="hip and wrist windows as the motion branch sees them")
     args = ap.parse_args()
-    suffix = "_bl" if args.bandlimited else ""
+    suffix = "_branch" if args.branch else ""
     files = sorted(SRC.glob("*.csv"))
     with ProcessPoolExecutor(args.workers) as pool:
         results = []
-        work = functools.partial(subject, limit=args.bandlimited)
+        work = functools.partial(subject, limit=args.branch)
         for i, r in enumerate(pool.map(work, files, range(len(files))), 1):
             results.append(r)
             print(f"  motion windows: subject {i}/{len(files)} {r[0]}", flush=True)
@@ -125,9 +120,6 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(out / f"motion_real{suffix}.npz", X=np.concatenate(X), activity=np.array(act),
                         location=np.array(loc), subject=np.array(subj))
-    if args.bandlimited:
-        print({k: int((np.array(act) == k).sum()) for k in np.unique(act)})
-        return
     IX, it, iamp, isp, iloc, isubj, iep = [], [], [], [], [], [], []
     for sid, _, inj in results:
         for f, t_end, amp, sp0, l, k in inj:
@@ -138,7 +130,7 @@ def main() -> None:
             iloc += [l] * len(f)
             isubj += [sid] * len(f)
             iep += [f"{sid}/{l}/{k}/{amp}"] * len(f)
-    np.savez_compressed(out / "motion_injected.npz", X=np.concatenate(IX), t_end=np.concatenate(it),
+    np.savez_compressed(out / f"motion_injected{suffix}.npz", X=np.concatenate(IX), t_end=np.concatenate(it),
                         amplitude=np.array(iamp), sp0=np.array(isp), location=np.array(iloc),
                         subject=np.array(isubj), episode=np.array(iep), onset_s=ONSET_S)
     a = np.array(act)
