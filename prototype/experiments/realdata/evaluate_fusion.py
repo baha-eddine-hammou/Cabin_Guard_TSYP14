@@ -8,9 +8,10 @@ rule already makes:
 * cardiac branch: real PhysioNet pulse-rhythm windows (drivedb for driving,
   vfdb/cudb/mitdb arrhythmia onsets for syncope, szdb seizures);
 * motion branch: real hip accelerometry recorded while driving. Seizure
-  episodes take, after a tonic phase, either recorded seizure mimics (UEA
-  Epilepsy TEST split, never seen by the motion model) or a modelled clonic
-  jerk train added to the driving signal at a swept amplitude;
+  episodes take, from onset, the neck accelerometry of a real motor seizure of
+  a held-out SeizeIT2 patient; or, after a tonic phase, recorded seizure mimics
+  (UEA Epilepsy TEST split) or a modelled clonic jerk train added to the
+  driving signal at a swept amplitude;
 * vision and posture branches: generated from documented models that include
   everyday confounders (blinks, glances down, leaning, one-handed steering).
 
@@ -40,7 +41,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import train_motion_real as tmr  # noqa: E402
 from cabinguard import config  # noqa: E402
 from cabinguard.fusion import CLASSES, FusionClassifier  # noqa: E402
-from cabinguard.motion_features import clonic_waveform, motion_features  # noqa: E402
+from cabinguard.motion_features import branch_features, clonic_waveform  # noqa: E402
 
 DATA = ROOT.parent / "data"
 DER = DATA / "derived"
@@ -70,12 +71,15 @@ def cardiac_models(records_needed):
     return out
 
 
-def motion_models(fold_of, acc, mh, epi):
-    """Recorded-motion models (``train_motion_real.training_set``), one per fold of driving subjects."""
+def motion_models(fold_of, sz_fold_of, acc, mh, epi, sz):
+    """Recorded-motion models (``train_motion_real.training_set``), one per fold of driving subjects
+    and SeizeIT2 patients."""
+    people = ({f"acc:{s}" for s in acc["subject"]} | {f"mh:{s}" for s in mh["subject"]}
+              | {f"sz:{s}" for s in sz["subject"]})
     out = {}
     for f in range(N_MOTION_FOLDS):
-        keep = set(np.unique(acc["subject"])) - {s for s, k in fold_of.items() if k == f}
-        out[f] = {"model": tmr.fit(*tmr.training_set(acc, mh, epi, keep, None)),
+        held = {f"acc:{s}" for s, k in fold_of.items() if k == f} | {f"sz:{s}" for s, k in sz_fold_of.items() if k == f}
+        out[f] = {"model": tmr.fit(*tmr.training_set(acc, mh, epi, sz, people - held)),
                   "train_prior_clonic": 0.5}      # equal class weight
     return out
 
@@ -85,7 +89,7 @@ class DrivingMotion:
     """Real hip-accelerometer driving, per subject, as raw g and as features."""
 
     def __init__(self):
-        real = np.load(DER / "motion_real.npz")
+        real = np.load(DER / "motion_real_branch.npz")
         m = (real["location"] == "lh") & (real["activity"] == "driving")
         self.feats = {s: real["X"][m & (real["subject"] == s)] for s in np.unique(real["subject"][m])}
         self.subjects = sorted(self.feats)
@@ -118,7 +122,14 @@ class DrivingMotion:
         on = int((onset_idx * STEP + 2.0) * 100)
         sp0 = float(rng.uniform(0.05, 0.15))
         acc[on:] += clonic_waveform((need - on) / 100.0, 100.0, amp, sp0, math.log(1 / sp0) / 40, rng)
-        return np.array([motion_features(acc[k * 50: k * 50 + 200], 100.0).vector() for k in range(n)])
+        return np.array([branch_features(acc[k * 50: k * 50 + 200], 100.0).vector() for k in range(n)])
+
+    def clinical_stream(self, subjects, n: int, onset_idx: int, seizure: np.ndarray) -> np.ndarray:
+        """Driving windows, then a recorded seizure from its onset to the end of its recording."""
+        out = self.feature_stream(subjects, n).copy()
+        k = min(len(seizure), n - onset_idx)
+        out[onset_idx:onset_idx + k] = seizure[:k]
+        return out
 
     def mimic_stream(self, subjects, n: int, onset_idx: int, mimics: list, rng) -> np.ndarray:
         """Driving windows, then recorded seizure-mimic series in random order from ``onset_idx``."""
@@ -273,17 +284,22 @@ def main() -> None:
             seiz.setdefault(p[0], []).append(sec)
     for r, evs in seiz.items():
         for on, off in evs:
-            for amp in ("mimic",) + AMPLITUDES_G:
-                tag = amp if amp == "mimic" else f"{amp:g}g"
+            for amp in ("clinical", "mimic") + AMPLITUDES_G:
+                tag = amp if isinstance(amp, str) else f"{amp:g}g"
                 episodes.append((f"Seizure@{tag}", r, on - 120.0, int((off - on + 150.0) / STEP), int(120.0 / STEP)))
 
     needed = sorted({e[1] for e in episodes})
     print(f"{len(episodes)} episodes; training {len(needed)} cardiac folds and {N_MOTION_FOLDS} motion folds")
     cmods = cardiac_models(needed)
-    acc, mh, epi = tmr.accelerometry(), tmr.mhealth_windows(), tmr.epilepsy_windows()
+    acc, mh, epi, sz = tmr.accelerometry(), tmr.mhealth_windows(), tmr.epilepsy_windows(), tmr.seizeit2_windows()
     te = epi["TEST"]
     mimics = [te["X"][te["series"] == s] for s in np.unique(te["series"][te["label"] == "EPILEPSY"])]
-    mmods = motion_models(fold_of, acc, mh, epi)
+    sz_fold_of = {s: i % N_MOTION_FOLDS for i, s in enumerate(np.unique(sz["subject"]))}
+    clinical = {f: [] for f in range(N_MOTION_FOLDS)}     # motor seizures from onset, per patient fold
+    for seg in np.unique(sz["segment"][np.isin(sz["group"], tmr.MOTOR)]):
+        m = (sz["segment"] == seg) & (sz["t_rel"] >= 1.0)
+        clinical[sz_fold_of[str(sz["subject"][m][0])]].append(sz["X"][m])
+    mmods = motion_models(fold_of, sz_fold_of, acc, mh, epi, sz)
 
     results = {name: {"Normal": {"triggers": 0, "hours": 0.0, "by_class": {}}, "events": {}} for name in CONFIGS}
     for ei, (kind, r, t0, n, onset) in enumerate(episodes):
@@ -292,7 +308,11 @@ def main() -> None:
         f = ei % N_MOTION_FOLDS
         subj = [s for s, k in fold_of.items() if k == f]
         erng = np.random.default_rng(rng.integers(1 << 31))
-        if kind == "Seizure@mimic":
+        if kind == "Seizure@clinical":
+            pool = clinical[f]
+            mot = motion.clinical_stream(subj[erng.integers(len(subj)):] + subj, n, onset, pool[erng.integers(len(pool))])
+            chans = modelled_channels(n, erng, "Seizure", onset + int(erng.uniform(0, 5) / STEP))
+        elif kind == "Seizure@mimic":
             tonic = int(erng.uniform(5, 15) / STEP)
             mot = motion.mimic_stream(subj[erng.integers(len(subj)):] + subj, n, onset + tonic, mimics, erng)
             chans = modelled_channels(n, erng, "Seizure", onset + int(erng.uniform(0, 5) / STEP))
