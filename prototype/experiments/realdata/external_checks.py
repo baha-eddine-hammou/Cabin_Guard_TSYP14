@@ -2,9 +2,13 @@
 
     python experiments/realdata/external_checks.py epilepsy mhealth har
 
+The model checked is ``models/motion_branch_injected.joblib``, the motion
+branch trained on injected jerks; ``train_motion_real.py`` evaluates the
+deployed branch trained on recorded motion.
+
 * ``epilepsy``: UEA "Epilepsy" (Villar et al.): healthy participants with a
   wrist accelerometer at 16 Hz performing seizure mimics, walking, running
-  and sawing. Two tests: (a) transfer, the deployed motion branch (trained on
+  and sawing. Two tests: (a) transfer, the injected-jerk motion branch (trained on
   hip driving data with injected jerks) applied unchanged after resampling to
   100 Hz; (b) within-dataset, the same features and model family trained on
   the official TRAIN split and scored on TEST. Real recorded seizure-like
@@ -152,7 +156,7 @@ def fires(p: np.ndarray) -> bool:
 
 
 def deployed_motion():
-    m = joblib.load(ROOT / "models" / "motion_branch.joblib")
+    m = joblib.load(ROOT / "models" / "motion_branch_injected.joblib")
     return lambda F: m["model"].predict_proba(F)[:, 1]
 
 

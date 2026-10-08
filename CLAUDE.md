@@ -12,6 +12,8 @@ checker cannot see".
 ## Challenge constraints
 
 - Phase 1 paper: at most 5 pages including references. Phase 2: at most 6.
+- Phase 1 review is anonymous: the author block stays "Anonymous Authors",
+  with no names, affiliations, e-mail addresses or PDF author metadata.
 - Section order follows the spec book's IEEE structure, merging only where the
   spec says "as applicable": Abstract, Introduction and Motivation, Related
   Work, Problem Definition, System Architecture, Detection Methodology, Safety

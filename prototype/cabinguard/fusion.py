@@ -2,10 +2,11 @@
 
 Branches and where their likelihoods come from:
 
-* ``cardiac`` (camera rPPG pulse rhythm): gradient-boosted trees trained on
+* ``cardiac`` (camera rPPG pulse rhythm): logistic regression trained on
   PhysioNet recordings (``models/cardiac_branch.joblib``);
-* ``motion`` (headrest IMU): gradient-boosted trees trained on real driving
-  accelerometry with injected clonic motion (``models/motion_branch.joblib``);
+* ``motion`` (headrest IMU): gradient-boosted trees trained on recorded motion
+  only: UEA Epilepsy seizure mimics against driving, everyday activities and
+  the mimics' own non-seizure series (``models/motion_branch.joblib``);
 * ``vision`` (camera EAR and head pitch) and ``posture`` (seatback FSR and
   wheel grip): expert-set class-conditional densities, to be refitted on
   Phase 2 recordings.

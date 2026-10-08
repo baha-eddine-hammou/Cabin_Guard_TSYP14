@@ -11,10 +11,17 @@ Two products, both in ``data/derived/``:
   train (``clonic_waveform``) added from t = 10 s; amplitude and the initial
   silent period are swept because no public recording measures clonic motion
   at a vehicle seat or headrest.
+
+With ``--bandlimited`` only the real windows are written, for the hip and
+wrist sensors, after every 100 Hz series is resampled to 16 Hz and back
+(``motion_real_bl.npz``). The recorded seizure mimics used in training are
+sampled at 16 Hz, so the 100 Hz data also enter training at that bandwidth and
+the sampling rate cannot separate the classes.
 """
 from __future__ import annotations
 
 import argparse
+import functools
 import sys
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
@@ -24,6 +31,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from cabinguard.motion_features import clonic_waveform, motion_features  # noqa: E402
+from scipy import signal  # noqa: E402
 
 DATA = Path(__file__).resolve().parents[3] / "data"
 SRC = DATA / "accelerometry-walk-climb-drive" / "raw_accelerometry_data"
@@ -46,12 +54,19 @@ def _segments(activity: np.ndarray):
     return [(int(activity[a]), a, b) for a, b in zip(starts, stops)]
 
 
-def _window_feats(acc: np.ndarray):
+def bandlimit(acc: np.ndarray) -> np.ndarray:
+    """A 100 Hz series as a 16 Hz sensor would record it, back at 100 Hz."""
+    return signal.resample_poly(signal.resample_poly(acc, 4, 25, axis=0), 25, 4, axis=0)[: len(acc)]
+
+
+def _window_feats(acc: np.ndarray, limit: bool = False):
+    if limit:
+        acc = bandlimit(acc)
     return np.array([motion_features(acc[i:i + WIN], FS).vector()
                      for i in range(0, acc.shape[0] - WIN + 1, STEP)])
 
 
-def subject(path: Path, seed: int):
+def subject(path: Path, seed: int, limit: bool = False):
     df = pd.read_csv(path)
     act = df["activity"].to_numpy()
     sid = path.stem
@@ -59,14 +74,14 @@ def subject(path: Path, seed: int):
     for code, a, b in _segments(act):
         if code not in ACTIVITIES or b - a < WIN:
             continue
-        for loc in LOCATIONS:
+        for loc in (("lh", "lw") if limit else LOCATIONS):
             acc = df[[f"{loc}_x", f"{loc}_y", f"{loc}_z"]].to_numpy()[a:b]
-            f = _window_feats(acc)
+            f = _window_feats(acc, limit)
             real.append((f, ACTIVITIES[code], loc))
     inj = []
     rng = np.random.default_rng(seed)
     drive = [(a, b) for code, a, b in _segments(act) if code == 4 and b - a >= EXCERPT_S * FS]
-    if drive:
+    if drive and not limit:
         n = int(EXCERPT_S * FS)
         for k in range(EXCERPTS_PER_SUBJECT):
             a, b = drive[rng.integers(len(drive))]
@@ -80,7 +95,7 @@ def subject(path: Path, seed: int):
                     on = int(ONSET_S * FS)
                     acc[on:] += clonic_waveform(EXCERPT_S - ONSET_S, FS, amp, sp0, growth,
                                                 np.random.default_rng(rng.integers(1 << 31)))
-                    f = _window_feats(acc)
+                    f = _window_feats(acc, limit)
                     t_end = (np.arange(len(f)) * STEP + WIN) / FS
                     inj.append((f, t_end, amp, sp0, loc, k))
     return sid, real, inj
@@ -89,11 +104,14 @@ def subject(path: Path, seed: int):
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--bandlimited", action="store_true", help="real hip and wrist windows at 16 Hz bandwidth")
     args = ap.parse_args()
+    suffix = "_bl" if args.bandlimited else ""
     files = sorted(SRC.glob("*.csv"))
     with ProcessPoolExecutor(args.workers) as pool:
         results = []
-        for i, r in enumerate(pool.map(subject, files, range(len(files))), 1):
+        work = functools.partial(subject, limit=args.bandlimited)
+        for i, r in enumerate(pool.map(work, files, range(len(files))), 1):
             results.append(r)
             print(f"  motion windows: subject {i}/{len(files)} {r[0]}", flush=True)
     X, act, loc, subj = [], [], [], []
@@ -105,8 +123,11 @@ def main() -> None:
             subj += [sid] * len(f)
     out = DATA / "derived"
     out.mkdir(parents=True, exist_ok=True)
-    np.savez_compressed(out / "motion_real.npz", X=np.concatenate(X), activity=np.array(act),
+    np.savez_compressed(out / f"motion_real{suffix}.npz", X=np.concatenate(X), activity=np.array(act),
                         location=np.array(loc), subject=np.array(subj))
+    if args.bandlimited:
+        print({k: int((np.array(act) == k).sum()) for k in np.unique(act)})
+        return
     IX, it, iamp, isp, iloc, isubj, iep = [], [], [], [], [], [], []
     for sid, _, inj in results:
         for f, t_end, amp, sp0, l, k in inj:

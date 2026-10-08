@@ -1,0 +1,289 @@
+{
+  "scope": "trained on recorded motion only: UEA Epilepsy TRAIN seizure mimics (positives); Epilepsy TRAIN other activities, PhysioNet walk-climb-drive (hip, wrist) and UCI MHEALTH (negatives)",
+  "features": [
+    "ser",
+    "log_band_rms",
+    "peak_hz",
+    "log_total_rms",
+    "rhythmicity",
+    "peakiness"
+  ],
+  "persistence_windows": 4,
+  "gamma": 0.85,
+  "accelerometry": {
+    "lh": {
+      "clapping": {
+        "alarms": 0,
+        "hours": 0.028194444444444446,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.014778325123152709
+      },
+      "driving": {
+        "alarms": 0,
+        "hours": 10.367777777777778,
+        "alarms_per_hour": 0.0,
+        "window_rate": 5.3584824777622976e-05,
+        "per_subject_alarms": {
+          "id00b70b13": 0,
+          "id079c763c": 0,
+          "id1165e00c": 0,
+          "id1c7e64ad": 0,
+          "id34e056c8": 0,
+          "id37a54bbf": 0,
+          "id3e3e50c7": 0,
+          "id4ea159a8": 0,
+          "id5308a7d6": 0,
+          "id5993bf4a": 0,
+          "id650857ca": 0,
+          "id687ab496": 0,
+          "id7c20ee7a": 0,
+          "id82b9735c": 0,
+          "id86237981": 0,
+          "id8af5374b": 0,
+          "id8e66893c": 0,
+          "idb221f542": 0,
+          "idbae5a811": 0,
+          "idc735fc09": 0,
+          "idc91a49d0": 0,
+          "idecc9265e": 0,
+          "idf1ce9a0f": 0,
+          "idf540d82b": 0,
+          "idf5e3678b": 0,
+          "idfc5f05e4": 0,
+          "idff99de96": 0
+        }
+      },
+      "stairs_down": {
+        "alarms": 12,
+        "hours": 0.6502777777777777,
+        "alarms_per_hour": 18.45365228534814,
+        "window_rate": 0.04143528406663819
+      },
+      "stairs_up": {
+        "alarms": 13,
+        "hours": 0.68375,
+        "alarms_per_hour": 19.012797074954296,
+        "window_rate": 0.03270363599431241
+      },
+      "walking": {
+        "alarms": 0,
+        "hours": 4.302638888888889,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0013880370573614385
+      }
+    },
+    "lw": {
+      "clapping": {
+        "alarms": 0,
+        "hours": 0.028194444444444446,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "driving": {
+        "alarms": 0,
+        "hours": 10.367777777777778,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.002478298145965063,
+        "per_subject_alarms": {
+          "id00b70b13": 0,
+          "id079c763c": 0,
+          "id1165e00c": 0,
+          "id1c7e64ad": 0,
+          "id34e056c8": 0,
+          "id37a54bbf": 0,
+          "id3e3e50c7": 0,
+          "id4ea159a8": 0,
+          "id5308a7d6": 0,
+          "id5993bf4a": 0,
+          "id650857ca": 0,
+          "id687ab496": 0,
+          "id7c20ee7a": 0,
+          "id82b9735c": 0,
+          "id86237981": 0,
+          "id8af5374b": 0,
+          "id8e66893c": 0,
+          "idb221f542": 0,
+          "idbae5a811": 0,
+          "idc735fc09": 0,
+          "idc91a49d0": 0,
+          "idecc9265e": 0,
+          "idf1ce9a0f": 0,
+          "idf540d82b": 0,
+          "idf5e3678b": 0,
+          "idfc5f05e4": 0,
+          "idff99de96": 0
+        }
+      },
+      "stairs_down": {
+        "alarms": 10,
+        "hours": 0.6502777777777777,
+        "alarms_per_hour": 15.378043571123452,
+        "window_rate": 0.024348568987612132
+      },
+      "stairs_up": {
+        "alarms": 0,
+        "hours": 0.68375,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0032500507820434695
+      },
+      "walking": {
+        "alarms": 14,
+        "hours": 4.302638888888889,
+        "alarms_per_hour": 3.253817101907744,
+        "window_rate": 0.006133186997643565
+      }
+    }
+  },
+  "mhealth": {
+    "arm elevation": {
+      "alarms": 0,
+      "hours": 0.15861111111111112,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    },
+    "climbing stairs": {
+      "alarms": 0,
+      "hours": 0.1625,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0008547008547008547
+    },
+    "cycling": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.010084033613445379
+    },
+    "jogging": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    },
+    "jumping": {
+      "alarms": 0,
+      "hours": 0.052222222222222225,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.013297872340425532
+    },
+    "knee bends": {
+      "alarms": 0,
+      "hours": 0.15819444444444444,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.021071115013169446
+    },
+    "lying": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    },
+    "running": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0025210084033613447
+    },
+    "sitting": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    },
+    "standing": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    },
+    "waist bends": {
+      "alarms": 0,
+      "hours": 0.1525,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0009107468123861566
+    },
+    "walking": {
+      "alarms": 0,
+      "hours": 0.16527777777777777,
+      "alarms_per_hour": 0.0,
+      "window_rate": 0.0
+    }
+  },
+  "injected_clonic_lh": {
+    "0.02": {
+      "episodes": 324,
+      "sensitivity": 0.0,
+      "median_latency_s": null
+    },
+    "0.05": {
+      "episodes": 324,
+      "sensitivity": 0.0,
+      "median_latency_s": null
+    },
+    "0.1": {
+      "episodes": 324,
+      "sensitivity": 0.0,
+      "median_latency_s": null
+    },
+    "0.2": {
+      "episodes": 324,
+      "sensitivity": 0.0,
+      "median_latency_s": null
+    },
+    "0.5": {
+      "episodes": 324,
+      "sensitivity": 0.7777777777777778,
+      "median_latency_s": 2.5
+    }
+  },
+  "epilepsy_test": {
+    "EPILEPSY": {
+      "series": 34,
+      "fired": 28
+    },
+    "RUNNING": {
+      "series": 37,
+      "fired": 0
+    },
+    "SAWING": {
+      "series": 30,
+      "fired": 2
+    },
+    "WALKING": {
+      "series": 37,
+      "fired": 0
+    }
+  },
+  "epilepsy_test_auc_series": 0.9790723981900453,
+  "har": {
+    "walking": {
+      "windows": 1722,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "upstairs": {
+      "windows": 1544,
+      "confident": 1,
+      "window_rate": 0.0006476683937823834
+    },
+    "downstairs": {
+      "windows": 1406,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "sitting": {
+      "windows": 1777,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "standing": {
+      "windows": 1906,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "lying": {
+      "windows": 1944,
+      "confident": 0,
+      "window_rate": 0.0
+    }
+  }
+}
