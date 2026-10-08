@@ -92,7 +92,10 @@ def main() -> None:
     args = ap.parse_args()
     files = sorted(SRC.glob("*.csv"))
     with ProcessPoolExecutor(args.workers) as pool:
-        results = list(pool.map(subject, files, range(len(files))))
+        results = []
+        for i, r in enumerate(pool.map(subject, files, range(len(files))), 1):
+            results.append(r)
+            print(f"  motion windows: subject {i}/{len(files)} {r[0]}", flush=True)
     X, act, loc, subj = [], [], [], []
     for sid, real, _ in results:
         for f, a, l in real:

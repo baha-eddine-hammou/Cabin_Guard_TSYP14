@@ -157,7 +157,10 @@ def main() -> None:
         for db in ("vfdb", "cudb", "mitdb"):
             for name in (DATA / db / "RECORDS").read_text().split():
                 jobs.append(pool.submit(arrhythmia_record, db, name))
-        rows = [j.result() for j in jobs]
+        rows = []
+        for i, j in enumerate(jobs, 1):
+            rows.append(j.result())
+            print(f"  cardiac windows: record {i}/{len(jobs)} {rows[-1][0]}", flush=True)
     X = np.concatenate([r[2] for r in rows])
     y = np.concatenate([r[3] for r in rows])
     rec = np.concatenate([[r[0]] * len(r[3]) for r in rows])
