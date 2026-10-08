@@ -1,6 +1,10 @@
-"""
-CabinGuard-ADI: Vehicle Safety Response & UNECE R157 Minimum Risk Maneuver Controller
-Executes Phase 1-4 safety state machine, driver override interlocks, and closed-loop vehicle physics.
+"""Minimum-risk manoeuvre state machine, phases 1-4, with driver override interlocks.
+
+The phase sequence is aligned with the transition demand of UN Regulation No. 157;
+timings and decelerations are design targets, not certified values. In phases 3
+and 4 the ECU requests a lateral move to the hard shoulder (``Shoulder_Req`` on
+0x120); the vehicle side performs it. ``lateral_pos_m`` here is the planned
+profile only.
 """
 from dataclasses import dataclass
 from enum import Enum
@@ -33,7 +37,7 @@ class VehicleDynamicsState:
     confirmed_etiology: str
 
 class VehicleSafetyController:
-    """Implements the deterministic UNECE R157 MRM safety state machine."""
+    """Deterministic MRM state machine, aligned with the UN R157 transition demand."""
     def __init__(self, initial_speed_kmh: float = config.HIGHWAY_CRUISE_SPEED_KMH):
         self.dt = config.FUSION_DT
         self.state = MRMState.NORMAL

@@ -77,6 +77,7 @@ class SecOCReceiver:
         self.last_fv = last_fv
         self.max_gap = max_gap
         self.rejected = {"mac": 0, "replay": 0, "data_id": 0}
+        self.last_reason = "INIT"      # verdict of the last frame: OK, MAC_FAIL, REPLAY or DATA_ID
 
     def reconstruct(self, fv_trunc: int) -> int:
         """Smallest counter newer than ``last_fv`` whose low byte equals ``fv_trunc``."""
@@ -89,10 +90,12 @@ class SecOCReceiver:
     def verify(self, pdu: SecuredPdu) -> bool:
         if pdu.data_id != self.data_id:
             self.rejected["data_id"] += 1
+            self.last_reason = "DATA_ID"
             return False
         fv = self.reconstruct(pdu.fv_trunc)
         if fv - self.last_fv > self.max_gap:
             self.rejected["replay"] += 1
+            self.last_reason = "REPLAY"
             return False
         expected = _mac(self._key, pdu.data_id, pdu.payload, fv)
         diff = 0
@@ -102,6 +105,8 @@ class SecOCReceiver:
             # A replayed frame reconstructs to a newer counter than the one it
             # was signed with, so it fails here rather than on the counter test.
             self.rejected["mac"] += 1
+            self.last_reason = "MAC_FAIL"
             return False
         self.last_fv = fv
+        self.last_reason = "OK"
         return True

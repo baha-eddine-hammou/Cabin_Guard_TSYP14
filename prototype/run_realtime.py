@@ -96,7 +96,7 @@ def main() -> None:
             if d is not None:
                 compute_ms.append((time.perf_counter() - c0) * 1000)
             if vehicle is not None:
-                g = vehicle.step(snap.t, veh_bus, ecu)
+                g = vehicle.step(snap.t, veh_bus, ecu, driver_brake=snap.brake_pedal)
             if k % 10 == 0:
                 state = ecu.controller.state.name if not ecu.failed else "ECU_FAILED"
                 post = d.raw.posteriors if d else {}

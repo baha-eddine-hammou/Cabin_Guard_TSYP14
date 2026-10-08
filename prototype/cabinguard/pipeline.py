@@ -19,7 +19,7 @@ import time
 from dataclasses import dataclass, field
 
 from . import config
-from .can_messages import MRM_CMD_ID, MRMCommand, MRMCommandTx
+from .can_messages import HEALTH_ID, MRM_CMD_ID, HealthStatus, HealthTx, MRMCommand, MRMCommandTx
 from .emergency_link import MEC, Bearer, EmergencyNotifier, PSAPReceiver, PseudonymSigner, build_denm, seal_for_psap
 from .feature_extraction import FeatureExtractor
 from .safety_controller import MRMState, VehicleSafetyController
@@ -30,6 +30,12 @@ PHASE_CODE = {MRMState.NORMAL: 0, MRMState.PHASE_1_PRE_ALERT: 1, MRMState.PHASE_
               MRMState.PHASE_3_ACTIVE_MRM: 3, MRMState.PHASE_4_STANDSTILL: 4}
 DEADLINE_S = config.FUSION_DT
 MAX_OVERRUNS = 3
+# Kinematic lateral model of the point-mass vehicle: the lateral speed is
+# bounded by a small heading angle times the forward speed, so the car cannot
+# move sideways once it has stopped.
+LATERAL_GAIN = 0.8                 # 1/s, proportional approach to the target offset
+LATERAL_SPEED_MAX_MS = 1.5
+MAX_HEADING_RAD = 0.1
 
 
 class Bus:
@@ -59,6 +65,7 @@ class CycleRecord:
     spoof: bool
     ecu_alive: bool
     compute_ms: float
+    lateral_m: float = 0.0
 
 
 class CabinGuardECU:
@@ -67,6 +74,7 @@ class CabinGuardECU:
         self.watchdog = CrossSensorWatchdog(classifier)
         self.controller = VehicleSafetyController(initial_speed_kmh)
         self.tx = MRMCommandTx(key)
+        self.health_tx = HealthTx(key)
         self.overruns = 0
         self.consecutive_overruns = 0
         self.failed = False
@@ -117,7 +125,12 @@ class CabinGuardECU:
             doors_unlock=dyn.doors_unlocked, decel_mss=dyn.longitudinal_accel_mss,
             etiology=dyn.confirmed_etiology if phase else "None", degraded_level=d.degraded_level,
             spoof_interlock=d.spoofing_detected, ecall=phase >= 2, denm=phase >= 3,
-            confidence=d.top_confidence)
+            confidence=d.top_confidence, shoulder=phase >= 3)
+        # Health first, command last: the 0x120 frame closes every cycle.
+        bus.send(HEALTH_ID, self.health_tx.frame(HealthStatus(
+            camera_ok=f.camera_ok, imu_ok=f.imu_ok, fsr_ok=f.seat_ok, grip_ok=f.seat_ok,
+            degraded_level=d.degraded_level, deadline_overruns=min(255, self.overruns),
+            posterior_entropy=d.shannon_entropy)))
         bus.send(MRM_CMD_ID, self.tx.frame(cmd))
         self.decision = d
         self.last_dyn = dyn
@@ -136,6 +149,7 @@ class VehicleSide:
     notifier: EmergencyNotifier = field(init=False)
     received_mec: list = field(default_factory=list)
     denm_sent: list = field(default_factory=list)
+    lateral_m: float = 0.0          # 0 = centre of the travel lane, negative = towards the shoulder
 
     def __post_init__(self):
         self.gateway = VehicleGateway(self.key)
@@ -151,6 +165,10 @@ class VehicleSide:
             self.gateway.receive(t, arb_id, data, driver_override=driver_brake)
         g = self.gateway.tick(t, self.speed_ms)
         self.speed_ms = max(0.0, self.speed_ms + g.decel_mss * config.FUSION_DT)
+        if g.shoulder:
+            limit = min(LATERAL_SPEED_MAX_MS, MAX_HEADING_RAD * self.speed_ms)
+            vy = max(-limit, min(limit, LATERAL_GAIN * (config.SHOULDER_OFFSET_M - self.lateral_m)))
+            self.lateral_m += vy * config.FUSION_DT
         if g.ecall_requested and not self._mec_submitted:
             d = ecu.decision
             etiology = ecu.controller.confirmed_etiology if not ecu.failed else "Unspecified"
@@ -242,5 +260,5 @@ def run_scenario(simulator, key: bytes = bytes(range(16)), classifier=None, ecu_
             t, d.mode if d else "ECU failed", d.raw.posteriors if d else {}, d.candidate_class if d else "-",
             bool(d and d.mrm_trigger_flag), ecu.controller.state.name if not ecu.failed else "ECU_FAILED",
             veh.speed_ms * 3.6, g.decel_mss, bool(d and d.spoofing_detected), not ecu.failed,
-            getattr(ecu, "last_compute_ms", 0.0)))
+            getattr(ecu, "last_compute_ms", 0.0), veh.lateral_m))
     return RunResult(records, ecu, veh, n_attack)

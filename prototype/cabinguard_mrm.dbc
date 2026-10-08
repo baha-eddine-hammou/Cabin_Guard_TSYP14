@@ -25,6 +25,7 @@ BO_ 288 MSG_CabinGuard_MRM_Cmd: 8 CabinGuardECU
  SG_ eCall_Req : 22|1@1+ (1,0) [0|1] "" VehicleGateway,TelematicsUnit
  SG_ DENM_Req : 23|1@1+ (1,0) [0|1] "" VehicleGateway,TelematicsUnit
  SG_ Confidence : 24|7@1+ (0.01,0) [0|1.27] "" VehicleGateway
+ SG_ Shoulder_Req : 31|1@1+ (1,0) [0|1] "" VehicleGateway
  SG_ SecOC_FV : 32|8@1+ (1,0) [0|255] "" VehicleGateway
  SG_ SecOC_MAC : 40|24@1+ (1,0) [0|16777215] "" VehicleGateway
 
@@ -53,6 +54,7 @@ CM_ BO_ 288 "Cyclic 100 ms in every state, also the ECU alive signal. AUTOSAR Se
 CM_ BO_ 289 "Sensor health only. Carries no biometric value (no EAR, heart rate or pressure), so other bus nodes learn nothing about the driver";
 CM_ SG_ 288 MRM_Phase "0=Normal 1=PreAlert 2=Escalation 3=ActiveMRM 4=Standstill";
 CM_ SG_ 288 Detected_Etiology "0=None 1=Syncope 2=Seizure 7=Unknown";
+CM_ SG_ 288 Shoulder_Req "1 = move laterally to the hard shoulder; plausible only in phases 3 and 4";
 CM_ SG_ 288 Degraded_Level "0=Nominal 1=CameraLost 2=IMULost 3=Minimum (no autonomous MRM)";
 CM_ SG_ 290 DENM_CauseCode "ETSI TS 102 894-2 CauseCode, 93=humanProblem";
 CM_ SG_ 290 DENM_SubCauseCode "0=unavailable, used deliberately so the DENM does not disclose the etiology";

@@ -32,10 +32,10 @@ CASES = {
     "normal driving": (T.NORMAL_DRIVING, 60, {}, lambda r: r.triggered_class == "Normal" and _final(r).speed_kmh > 99,
                        "no manoeuvre"),
     "cardiac syncope": (T.CARDIAC_SYNCOPE, 70, {}, lambda r: r.triggered_class == "Syncope"
-                        and _final(r).mrm_state == "PHASE_4_STANDSTILL" and len(r.vehicle.received_mec) == 1,
+                        and _final(r).mrm_state == "PHASE_4_STANDSTILL" and len(r.vehicle.received_mec) == 1 and _final(r).lateral_m < -6.5,
                         "stop on shoulder, verified MEC at PSAP"),
     "convulsive seizure": (T.EPILEPTIC_SEIZURE, 70, {}, lambda r: r.triggered_class == "Seizure"
-                           and _final(r).mrm_state == "PHASE_4_STANDSTILL" and len(r.vehicle.received_mec) == 1,
+                           and _final(r).mrm_state == "PHASE_4_STANDSTILL" and len(r.vehicle.received_mec) == 1 and _final(r).lateral_m < -6.5,
                            "stop on shoulder, verified MEC at PSAP"),
     "sensor failure: IMU disconnect": (T.IMU_HARDWARE_FAULT, 40, {}, lambda r: r.triggered_class == "Normal"
                                        and any("IMU lost" in x.mode for x in r.records), "Degraded 2, no manoeuvre"),
