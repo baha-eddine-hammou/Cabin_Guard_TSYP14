@@ -17,7 +17,7 @@ seat FSR, wheel grip ──────┘   (per sensor)  (bounded)  (modes,   
 | Claim | Evidence | Where |
 |---|---|---|
 | Pulse-rhythm branch separates VT/VF and ictal tachycardia from normal rhythm | 130 PhysioNet records (drivedb, szdb, vfdb, cudb, mitdb), leave-one-record-out | `prototype/results/branch_metrics.json` |
-| Motion branch separates recorded seizure-like motion from driving and everyday activity | Trained on recorded motion only: UEA Epilepsy seizure mimics (healthy volunteers, wrist) against PhysioNet walk-climb-drive and UCI MHEALTH; held-out subjects, the Epilepsy test split (same six volunteers) and UCI HAR (never trained on). Modelled clonic jerks (Conradsen et al. 2013) are a test only | `prototype/results/motion_real.json` |
+| Motion branch detects convulsive seizure motion | Trained on recorded motion only: SeizeIT2 clinical motor seizures (neck accelerometer, OpenNeuro ds005873) and UEA Epilepsy mimics against SeizeIT2 background, PhysioNet walk-climb-drive and UCI MHEALTH; patients and subjects held out in five folds, UCI HAR never trained on. Alone it raises alarms during real driving; the two-sensor fusion absorbs them. Modelled clonic jerks (Conradsen et al. 2013) are a test only | `prototype/results/motion_real.json`, `motion_labelling_iterations.json` |
 | Fused detector: false MRM starts per hour, sensitivity, latency | Composite episodes: real cardiac and motion branches, modelled eye/head/seat channels, out-of-fold models, 22 h of real driving | `prototype/results/fusion_metrics.json` |
 | Fault and attack handling | Full software pipeline with synthetic sensors, 14 cases x 10 seeds | `prototype/results/fault_matrix.json` |
 

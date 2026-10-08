@@ -39,7 +39,21 @@
     },
     {
       "labelling": "motor ictal windows above 2x the pre-ictal RMS and above the median hip driving RMS (0.030 g)",
-      "run": "pending (next Colab run)"
+      "run": "Colab (current results/motion_real.json)",
+      "seizeit2_detected": {
+        "automatisms": "6/67",
+        "convulsive": "42/52",
+        "hyperkinetic": "40/270",
+        "non-motor": "10/283",
+        "tonic or clonic": "4/29",
+        "unclassified": "15/97"
+      },
+      "seizeit2_background_alarms_per_hour": 6.59,
+      "driving_alarms_per_hour": {
+        "lh": 9.74,
+        "lw": 6.85
+      },
+      "har_window_rate_max": 0.017
     }
   ]
 }

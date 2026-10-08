@@ -149,6 +149,7 @@ def motion_real() -> dict[str, str]:
         m["MrNoMhRunningAlarms"] = str(alt["mhealth"]["running"]["alarms"])
         m["MrNoMhCyclingAlarms"] = str(alt["mhealth"]["cycling"]["alarms"])
         m["MrDriveWristFA"] = fmt(acc["lw"]["driving"]["alarms_per_hour"], 1)
+        m["MrRunningAlarms"] = str(mh["running"]["alarms"])
     return m
 
 
