@@ -17,7 +17,9 @@ def _sources(rng):
     mh = {"X": rng.normal(size=(10, 6)), "subject": np.repeat(["m1", "m2"], 5)}
     epi = {"TRAIN": {"X": rng.normal(size=(8, 6)), "label": np.array(["EPILEPSY"] * 3 + ["WALKING"] * 5)}}
     # SeizeIT2: 6 motor ictal windows, 2 pre-ictal, 4 background, 3 non-motor ictal (never trained on)
-    sz = {"X": rng.normal(size=(15, 6)),
+    X = rng.normal(size=(15, 6))
+    X[:6, [1, 3]] += 5.0                                     # ictal windows move more than pre-ictal
+    sz = {"X": X, "segment": np.array([0] * 8 + [1] * 4 + [2] * 3),
           "group": np.array(["convulsive"] * 8 + ["background"] * 4 + ["non-motor"] * 3),
           "inside": np.array([True] * 6 + [False] * 2 + [False] * 4 + [True] * 3),
           "t_rel": np.array([5.0] * 6 + [-30.0] * 2 + [np.nan] * 4 + [5.0] * 3),
@@ -49,7 +51,8 @@ def test_held_out_people_are_excluded():
 def test_seizure_groups():
     assert tmr.seizure_group("sz_foc_f2b") == "convulsive"
     assert tmr.seizure_group("sz_foc_ia_m_hyperkinetic") == "hyperkinetic"
-    assert tmr.seizure_group("sz_uo_m_tonicMyio") == "tonic or myoclonic"
+    assert tmr.seizure_group("sz_uo_m_tonicMyio") == "tonic or clonic"
+    assert tmr.seizure_group("sz_foc_ia_m_clonic") == "tonic or clonic"
     assert tmr.seizure_group("sz_foc_ia_m_automatisms") == "automatisms"
     assert tmr.seizure_group("sz_foc_ia_nm") == "non-motor"
 
@@ -57,3 +60,9 @@ def test_seizure_groups():
 def test_alarm_runs_need_persistence():
     assert tmr.runs(np.array([1, 1, 1, 0, 1, 1, 1, 1, 1], bool), 4) == 1
     assert tmr.first_alarm(np.array([0, 1, 1, 1, 1], bool), 4) == 4
+
+
+def test_still_ictal_windows_are_not_positives():
+    acc, mh, epi, sz = _sources(np.random.default_rng(3))
+    sz["X"][2:6, [1, 3]] = np.median(sz["X"][6:8][:, [1, 3]], axis=0)   # four ictal windows as still as pre-ictal
+    assert tmr.active(sz)[:6].tolist() == [True, True, False, False, False, False]

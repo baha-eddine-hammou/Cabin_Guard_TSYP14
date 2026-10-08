@@ -9,9 +9,10 @@ Training windows, all real recordings:
 
 * positives: motor seizures recorded in epilepsy monitoring units with a neck
   accelerometer (SeizeIT2, OpenNeuro ds005873, ``extract_seizeit2.py``):
-  focal-to-bilateral tonic-clonic, hyperkinetic, tonic and myoclonic, inside
-  the annotated onset and offset; and the seizure mimics of healthy volunteers
-  (UEA Epilepsy, Villar et al., TRAIN split, wrist);
+  focal-to-bilateral tonic-clonic, hyperkinetic, tonic, clonic and myoclonic, inside
+  the annotated onset and offset where the motion exceeds twice the RMS of
+  the same seizure's pre-ictal minute (still ictal phases are not trained on);
+  and the seizure mimics of healthy volunteers (UEA Epilepsy, Villar et al., TRAIN split, wrist);
 * negatives: SeizeIT2 background more than 10 min from any seizure and the
   minute before each seizure; the Epilepsy TRAIN walking, running and sawing;
   PhysioNet walk-climb-drive (hip, wrist: driving, walking, stairs, clapping);
@@ -65,6 +66,7 @@ GAMMA = ext.GAMMA
 N_FOLDS = 5
 LOCATIONS = ("lh", "lw")
 PREICTAL_S = 10.0           # windows ending this long before onset are negatives
+ACTIVE_RATIO = 2.0          # ictal windows train as positives only above this multiple of pre-ictal RMS
 
 
 def gbdt():
@@ -98,8 +100,8 @@ def seizure_group(event: str) -> str:
         return "convulsive"
     if "hyperkinetic" in event:
         return "hyperkinetic"
-    if any(m in event for m in ("_m_tonic", "myoclonic", "tonicMyo")) or event.endswith("_m"):
-        return "tonic or myoclonic"
+    if any(m in event for m in ("_m_tonic", "clonic", "tonicMyo")) or event.endswith("_m"):
+        return "tonic or clonic"
     if "automatisms" in event:
         return "automatisms"
     if "_nm" in event:
@@ -107,7 +109,7 @@ def seizure_group(event: str) -> str:
     return "unclassified"
 
 
-MOTOR = ("convulsive", "hyperkinetic", "tonic or myoclonic")
+MOTOR = ("convulsive", "hyperkinetic", "tonic or clonic")
 
 
 # ------------------------------------------------------------- sources ---
@@ -172,7 +174,8 @@ def seizeit2_windows() -> dict:
     cache = DER / "seizeit2_branch.npz"
     if not cache.exists():
         d = np.load(DER / "seizeit2_segments.npz")
-        segs = [(d["x"][a:a + n], f) for a, n, f in zip(d["start"], d["length"], d["fs"])]
+        x = d["x"]                                    # decompress once, not once per segment
+        segs = [(x[a:a + n], f) for a, n, f in zip(d["start"], d["length"], d["fs"])]
         with ProcessPoolExecutor() as pool:
             feats = list(pool.map(_seizeit2_segment, segs, chunksize=16))
         X, t_rel, inside, group, subj, seg = [], [], [], [], [], []
@@ -207,9 +210,25 @@ def injected() -> dict:
 
 
 # ------------------------------------------------------------- training ---
+def active(sz: dict) -> np.ndarray:
+    """Ictal windows whose 2-6 Hz or total RMS exceeds ``ACTIVE_RATIO`` times the median of the same
+    seizure's pre-ictal windows. The annotation spans the whole seizure, including still phases
+    that motion cannot show; those windows are left out of training, not labelled negative."""
+    out = np.zeros(len(sz["X"]), bool)
+    lim = np.log10(ACTIVE_RATIO)
+    for seg in np.unique(sz["segment"][sz["inside"]]):
+        m = sz["segment"] == seg
+        pre = m & (sz["t_rel"] < -PREICTAL_S)
+        if not pre.any():
+            continue
+        base = np.median(sz["X"][pre][:, [1, 3]], axis=0)       # log band RMS, log total RMS
+        out[m] = sz["inside"][m] & np.any(sz["X"][m][:, [1, 3]] > base + lim, axis=1)
+    return out
+
+
 def sz_roles(sz: dict) -> tuple[np.ndarray, np.ndarray]:
-    """Masks of SeizeIT2 training positives (motor ictal) and negatives (background, pre-ictal)."""
-    pos = np.isin(sz["group"], MOTOR) & sz["inside"]
+    """Masks of SeizeIT2 training positives (active motor ictal) and negatives (background, pre-ictal)."""
+    pos = np.isin(sz["group"], MOTOR) & active(sz)
     neg = (sz["group"] == "background") | (sz["t_rel"] < -PREICTAL_S)
     return pos, neg
 
