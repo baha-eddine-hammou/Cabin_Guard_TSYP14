@@ -66,3 +66,13 @@ def test_still_ictal_windows_are_not_positives():
     acc, mh, epi, sz = _sources(np.random.default_rng(3))
     sz["X"][2:6, [1, 3]] = np.median(sz["X"][6:8][:, [1, 3]], axis=0)   # four ictal windows as still as pre-ictal
     assert tmr.active(sz)[:6].tolist() == [True, True, False, False, False, False]
+
+
+def test_seizure_windows_weaker_than_road_vibration_are_not_positives():
+    acc, mh, epi, sz = _sources(np.random.default_rng(4))
+    acc |= {"activity": np.array(["driving"] * 40), "location": np.array(["lh"] * 40)}
+    acc["X"][:, 3] = np.log10(0.03 + 1e-4)                   # drivers at 0.03 g total RMS
+    sz["X"][:6, 3] = np.log10(np.array([0.1, 0.1, 0.1, 0.01, 0.01, 0.01]) + 1e-4)
+    sz["X"][6:8, 3] = np.log10(0.001 + 1e-4)                 # still pre-ictal minute
+    assert abs(tmr.driving_floor_g(acc) - 0.03) < 1e-9
+    assert tmr.active(sz, tmr.driving_floor_g(acc))[:6].tolist() == [True] * 3 + [False] * 3
