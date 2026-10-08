@@ -10,7 +10,7 @@ requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26",
     "scipy>=1.11",
-    "scikit-learn>=1.4",
+    "scikit-learn==1.6.1",    # pinned: saved models must load where they were trained (Colab) and on the target
     "joblib>=1.3",
     "threadpoolctl>=3.1",
     "pandas>=2.0",

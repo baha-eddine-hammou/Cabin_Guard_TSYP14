@@ -11,7 +11,9 @@ Training windows, all real recordings:
   accelerometer (SeizeIT2, OpenNeuro ds005873, ``extract_seizeit2.py``):
   focal-to-bilateral tonic-clonic, hyperkinetic, tonic, clonic and myoclonic, inside
   the annotated onset and offset where the motion exceeds twice the RMS of
-  the same seizure's pre-ictal minute (still ictal phases are not trained on);
+  the same seizure's pre-ictal minute and the median motion of the training
+  drivers' hip sensor (motion weaker than road vibration cannot be told apart
+  at a seat; those ictal windows are not trained on);
   and the seizure mimics of healthy volunteers (UEA Epilepsy, Villar et al., TRAIN split, wrist);
 * negatives: SeizeIT2 background more than 10 min from any seizure and the
   minute before each seizure; the Epilepsy TRAIN walking, running and sawing;
@@ -210,10 +212,11 @@ def injected() -> dict:
 
 
 # ------------------------------------------------------------- training ---
-def active(sz: dict) -> np.ndarray:
+def active(sz: dict, floor_g: float = 0.0) -> np.ndarray:
     """Ictal windows whose 2-6 Hz or total RMS exceeds ``ACTIVE_RATIO`` times the median of the same
-    seizure's pre-ictal windows. The annotation spans the whole seizure, including still phases
-    that motion cannot show; those windows are left out of training, not labelled negative."""
+    seizure's pre-ictal windows, and whose total RMS exceeds ``floor_g``. The annotation spans the
+    whole seizure, including phases too still to show; those windows are left out of training,
+    not labelled negative."""
     out = np.zeros(len(sz["X"]), bool)
     lim = np.log10(ACTIVE_RATIO)
     for seg in np.unique(sz["segment"][sz["inside"]]):
@@ -223,12 +226,23 @@ def active(sz: dict) -> np.ndarray:
             continue
         base = np.median(sz["X"][pre][:, [1, 3]], axis=0)       # log band RMS, log total RMS
         out[m] = sz["inside"][m] & np.any(sz["X"][m][:, [1, 3]] > base + lim, axis=1)
-    return out
+    return out & (sz["X"][:, 3] > np.log10(floor_g + 1e-4)) if floor_g > 0 else out
 
 
-def sz_roles(sz: dict) -> tuple[np.ndarray, np.ndarray]:
-    """Masks of SeizeIT2 training positives (active motor ictal) and negatives (background, pre-ictal)."""
-    pos = np.isin(sz["group"], MOTOR) & active(sz)
+def driving_floor_g(acc: dict, keep=None) -> float:
+    """Median total RMS of hip driving windows of the training drivers: motion below it cannot be
+    told apart from road vibration at a seat, so seizure windows below it are not trained on."""
+    if "activity" not in acc:
+        return 0.0
+    m = (acc["activity"] == "driving") & (acc["location"] == "lh")
+    if keep is not None:
+        m &= np.isin(np.char.add("acc:", acc["subject"].astype(str)), list(keep))
+    return float(np.median(10 ** acc["X"][m, 3] - 1e-4)) if m.any() else 0.0
+
+
+def sz_roles(sz: dict, floor_g: float = 0.0) -> tuple[np.ndarray, np.ndarray]:
+    """Masks of SeizeIT2 training positives (moving motor ictal) and negatives (background, pre-ictal)."""
+    pos = np.isin(sz["group"], MOTOR) & active(sz, floor_g)
     neg = (sz["group"] == "background") | (sz["t_rel"] < -PREICTAL_S)
     return pos, neg
 
@@ -238,7 +252,7 @@ def training_set(acc: dict, mh: dict | None, epi: dict, sz: dict, keep=None):
     def sel(ids):
         return np.ones(len(ids), bool) if keep is None else np.isin(ids, list(keep))
     tr = epi["TRAIN"]
-    sz_pos, sz_neg = sz_roles(sz)
+    sz_pos, sz_neg = sz_roles(sz, driving_floor_g(acc, keep))
     s = sel(np.char.add("sz:", sz["subject"].astype(str)))
     pos = [p for p in (sz["X"][sz_pos & s], tr["X"][tr["label"] == "EPILEPSY"]) if len(p)]
     negs = [tr["X"][tr["label"] != "EPILEPSY"],
@@ -349,7 +363,7 @@ def cross_validate(acc, mh, epi, sz, inj, fold, use_mhealth=True) -> dict:
 
 def main() -> None:
     acc, mh, epi, sz, inj = accelerometry(), mhealth_windows(), epilepsy_windows(), seizeit2_windows(), injected()
-    pos, neg = sz_roles(sz)
+    pos, neg = sz_roles(sz, driving_floor_g(acc))
     print(f"windows: accelerometry {len(acc['X'])}, MHEALTH {len(mh['X'])}, Epilepsy TRAIN "
           f"{len(epi['TRAIN']['X'])}, SeizeIT2 {len(sz['X'])} ({int(pos.sum())} motor ictal, {int(neg.sum())} "
           f"background), {np.unique(sz['subject']).size} patients", flush=True)
