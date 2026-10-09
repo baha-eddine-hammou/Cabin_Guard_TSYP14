@@ -1,9 +1,23 @@
-numpy>=2.0
-scipy>=1.18
-matplotlib>=3.11
-rich>=15.0
+# Same as pyproject.toml; kept for `pip install -r requirements.txt`.
+numpy>=1.26
+scipy>=1.11
+scikit-learn==1.6.1    # pinned: the saved models must load where they were trained
+joblib>=1.3
+threadpoolctl>=3.1
+pandas>=2.0
 cryptography>=42.0
 wfdb>=4.1
-scikit-learn>=1.4
-joblib>=1.3
-
+matplotlib>=3.8
+rich>=13.0
+# Phase 2 hardware and tests
+python-can>=4.3
+cantools>=39.0
+pyserial>=3.5
+pytest>=8.0
+# webcam (Tasks FaceLandmarker; never also install opencv-python)
+mediapipe>=0.10.30
+opencv-contrib-python>=4.8
+# jury demo dashboard
+fastapi>=0.110
+uvicorn>=0.29
+websockets>=12

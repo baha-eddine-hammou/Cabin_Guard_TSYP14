@@ -1,0 +1,1066 @@
+{
+  "scope": "composite episodes: real cardiac and motion branches, modelled vision and posture; out-of-fold models",
+  "smoothing_s": 2.0,
+  "persistence_s": 2.0,
+  "configs": {
+    "cardiac only (uncapped)": {
+      "false_mrm_per_hour": 3.9235828374569377,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Syncope": 87
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 30.5,
+          "p90_latency_s": 54.6
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 30.5,
+          "p90_latency_s": 54.6
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 30.5,
+          "p90_latency_s": 54.6
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 30.5,
+          "p90_latency_s": 54.6
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 30.5,
+          "p90_latency_s": 54.6
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 47,
+          "wrong_class": 0,
+          "pre_onset_false": 22,
+          "sensitivity": 0.5875,
+          "median_latency_s": 7.5,
+          "p90_latency_s": 32.099999999999994
+        }
+      }
+    },
+    "motion only (uncapped)": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 17.25,
+          "p90_latency_s": 38.9
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "vision only (uncapped)": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 21.349999999999998
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 20.0,
+          "p90_latency_s": 45.39999999999999
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 17.0,
+          "p90_latency_s": 50.69999999999998
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 13.0,
+          "p90_latency_s": 20.849999999999998
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 17.5,
+          "p90_latency_s": 29.05
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 80,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 14.5
+        }
+      }
+    },
+    "posture only (uncapped)": {
+      "false_mrm_per_hour": 1.1274663326025682,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 25
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 1.0,
+          "median_latency_s": 6.75,
+          "p90_latency_s": 15.449999999999989
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 7.25,
+          "p90_latency_s": 9.6
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 1.0,
+          "median_latency_s": 5.25,
+          "p90_latency_s": 14.299999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 5.25,
+          "p90_latency_s": 8.249999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 1.0,
+          "median_latency_s": 5.0,
+          "p90_latency_s": 7.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 1,
+          "pre_onset_false": 1,
+          "sensitivity": 0.9875,
+          "median_latency_s": 14.0,
+          "p90_latency_s": 19.6
+        }
+      }
+    },
+    "real branches: cardiac + motion": {
+      "false_mrm_per_hour": 0.09019730660820546,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 2
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 27.25,
+          "p90_latency_s": 31.5
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 17.0,
+          "p90_latency_s": 31.5
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 4,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.4,
+          "median_latency_s": 19.0,
+          "p90_latency_s": 20.0
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 1,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.1,
+          "median_latency_s": 110.5,
+          "p90_latency_s": 110.5
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 18.0,
+          "p90_latency_s": 38.49999999999999
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 2,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "full fusion": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 16.2
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 17.549999999999997
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 21.449999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 22.25,
+          "p90_latency_s": 39.449999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 11.0,
+          "p90_latency_s": 19.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 0.9875,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 14.600000000000001
+        }
+      }
+    },
+    "full fusion, one sensor may decide": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 16.2
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 17.549999999999997
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 21.39999999999999
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 22.25,
+          "p90_latency_s": 39.449999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 11.0,
+          "p90_latency_s": 19.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 0.9875,
+          "median_latency_s": 11.5,
+          "p90_latency_s": 13.600000000000001
+        }
+      }
+    },
+    "camera lost (motion + posture)": {
+      "false_mrm_per_hour": 0.09019730660820546,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 2
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 15.0,
+          "p90_latency_s": 20.349999999999998
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 15.0,
+          "p90_latency_s": 19.399999999999995
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 16.25,
+          "p90_latency_s": 28.449999999999964
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 2,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.2,
+          "median_latency_s": 57.5,
+          "p90_latency_s": 99.9
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 16.0,
+          "p90_latency_s": 25.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "IMU lost (cardiac + vision + posture)": {
+      "false_mrm_per_hour": 0.1352959599123082,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 3
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 11.5,
+          "p90_latency_s": 20.8
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 10.5,
+          "p90_latency_s": 34.09999999999997
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 21.900000000000006
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 15.0,
+          "p90_latency_s": 27.65
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 10.5,
+          "p90_latency_s": 24.6
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9875,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 14.100000000000001
+        }
+      }
+    },
+    "sweep: full fusion, smoothing 0 s": {
+      "false_mrm_per_hour": 0.04509865330410273,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 1
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 14.2
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 17.9
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 20.449999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 21.5,
+          "p90_latency_s": 36.5
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 13.0,
+          "p90_latency_s": 18.099999999999998
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 77,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9625,
+          "median_latency_s": 11.5,
+          "p90_latency_s": 16.400000000000006
+        }
+      }
+    },
+    "sweep: real branches, smoothing 0 s": {
+      "false_mrm_per_hour": 0.04509865330410273,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 1
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 26.75,
+          "p90_latency_s": 32.75
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 17.0,
+          "p90_latency_s": 28.8
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 19.5,
+          "p90_latency_s": 20.1
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 1,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.1,
+          "median_latency_s": 109.5,
+          "p90_latency_s": 109.5
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 18.5,
+          "p90_latency_s": 41.1
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 3,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "sweep: full fusion, smoothing 2 s": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 16.2
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 17.549999999999997
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 21.449999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 22.25,
+          "p90_latency_s": 39.449999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 11.0,
+          "p90_latency_s": 19.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 0.9875,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 14.600000000000001
+        }
+      }
+    },
+    "sweep: real branches, smoothing 2 s": {
+      "false_mrm_per_hour": 0.09019730660820546,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 2
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 27.25,
+          "p90_latency_s": 31.5
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 17.0,
+          "p90_latency_s": 31.5
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 4,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.4,
+          "median_latency_s": 19.0,
+          "p90_latency_s": 20.0
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 1,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.1,
+          "median_latency_s": 110.5,
+          "p90_latency_s": 110.5
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 18.0,
+          "p90_latency_s": 38.49999999999999
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 2,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "sweep: full fusion, smoothing 4 s": {
+      "false_mrm_per_hour": 0.04509865330410273,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 1
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 15.0,
+          "p90_latency_s": 17.1
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.75,
+          "p90_latency_s": 17.249999999999996
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 13.0,
+          "p90_latency_s": 22.699999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 22.5,
+          "p90_latency_s": 32.449999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 15.25,
+          "p90_latency_s": 20.9
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 78,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.975,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 16.15
+        }
+      }
+    },
+    "sweep: real branches, smoothing 4 s": {
+      "false_mrm_per_hour": 0.04509865330410273,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 1
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 3,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.3,
+          "median_latency_s": 27.5,
+          "p90_latency_s": 31.9
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 6,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.6,
+          "median_latency_s": 18.5,
+          "p90_latency_s": 33.0
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 3,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.3,
+          "median_latency_s": 19.5,
+          "p90_latency_s": 21.1
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 19.0,
+          "p90_latency_s": 64.35
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    },
+    "sweep: full fusion, smoothing 8 s": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 16.0,
+          "p90_latency_s": 21.3
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 14.5,
+          "p90_latency_s": 19.700000000000003
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 15.0,
+          "p90_latency_s": 24.100000000000005
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 7,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.7,
+          "median_latency_s": 26.5,
+          "p90_latency_s": 43.6
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 16.75,
+          "p90_latency_s": 25.1
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 78,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.975,
+          "median_latency_s": 16.5,
+          "p90_latency_s": 18.5
+        }
+      }
+    },
+    "sweep: real branches, smoothing 8 s": {
+      "false_mrm_per_hour": 0.04509865330410273,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {
+        "Seizure": 1
+      },
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 1,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.1,
+          "median_latency_s": 29.5,
+          "p90_latency_s": 29.5
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 5,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.5,
+          "median_latency_s": 20.5,
+          "p90_latency_s": 30.400000000000002
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 7,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.7,
+          "median_latency_s": 22.0,
+          "p90_latency_s": 48.60000000000001
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 0,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.0,
+          "median_latency_s": null,
+          "p90_latency_s": null
+        }
+      }
+    }
+  }
+}

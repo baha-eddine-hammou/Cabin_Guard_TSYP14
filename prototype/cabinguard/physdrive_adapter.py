@@ -29,13 +29,22 @@ import numpy as np
 from scipy.io import loadmat
 
 from .config import FUSION_DT
-from .simulator import SensorFrame, SensorMode
 
 
 _HEART_RATE_KEYS = (
     "hr", "heart_rate", "heartrate", "heart rate", "hr_bpm", "heart_rate_bpm"
 )
 _TIMESTAMP_KEYS = ("timestamp", "time", "time_s", "time_sec", "seconds")
+
+
+@dataclass(frozen=True)
+class PhysDriveFrame:
+    """One replayed PhysDrive row. PhysDrive has no headrest IMU, seat or
+    wheel channels, so only the reference heart rate is real."""
+
+    timestamp: float
+    rppg_hr_bpm: float
+    imu_heartbeat_ok: bool = False
 
 
 @dataclass(frozen=True)
@@ -47,7 +56,7 @@ class PhysDriveSession:
 
 
 class PhysDriveAdapter:
-    """Replay PhysDrive physiological rows as prototype ``SensorFrame`` objects."""
+    """Replay PhysDrive physiological rows as prototype ``PhysDriveFrame`` objects."""
 
     def __init__(
         self,
@@ -78,7 +87,7 @@ class PhysDriveAdapter:
             )
         return sessions
 
-    def iter_session(self, session: PhysDriveSession) -> Iterator[SensorFrame]:
+    def iter_session(self, session: PhysDriveSession) -> Iterator[PhysDriveFrame]:
         """Yield frames for one PhysDrive session."""
         rows = list(self._read_csv_rows(session.csv_path)) if session.csv_path else []
         if not rows and session.csv_path:
@@ -109,26 +118,9 @@ class PhysDriveAdapter:
             if heart_rate is None or not np.isfinite(heart_rate):
                 heart_rate = 74.0
 
-            yield SensorFrame(
-                timestamp=float(timestamp),
-                mode=SensorMode.NORMAL,
-                ear=0.30,
-                pitch_deg=0.0,
-                optical_snr_db=0.0,
-                face_detected=True,
-                rppg_hr_bpm=float(max(0.0, heart_rate)),
-                # PhysDrive has no headrest IMU. Make that limitation explicit.
-                imu_accel_window=np.zeros((100, 3), dtype=float),
-                imu_gyro_window=np.zeros((100, 3), dtype=float),
-                imu_heartbeat_ok=False,
-                # These channels are unavailable in PhysDrive and are neutral only.
-                fsr_pressure=0.85,
-                wheel_grip="ACTIVE",
-                steering_torque_nm=0.0,
-                brake_pedal_pressed=False,
-            )
+            yield PhysDriveFrame(float(timestamp), float(max(0.0, heart_rate)))
 
-    def iter_frames(self) -> Iterator[SensorFrame]:
+    def iter_frames(self) -> Iterator[PhysDriveFrame]:
         """Yield frames from all discovered sessions in deterministic order."""
         for session in self.discover_sessions():
             yield from self.iter_session(session)

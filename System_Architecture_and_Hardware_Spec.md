@@ -36,9 +36,9 @@ This document defines the complete electrical, mechanical, and compute hardware 
 |  |               Main Edge AI Controller (NVIDIA Jetson Orin NX 16GB) |                 |
 |  |  • Real-Time MediaPipe / TensorRT Landmark Pipeline (60 FPS)       |                 |
 |  |  • Welch Spectral Energy Ratio & Postural Slump Index Estimation   |                 |
-|  |  • Bayesian Multi-Etiology Classifier with Entropy Gating          |                 |
-|  |  • Cross-Sensor Watchdog & Laser Anti-Spoofing Interlock (Alg. 1)  |                 |
-|  |  • AUTOSAR SecOC Cryptographic Engine (AES-128-CMAC / HMAC-SHA256) |                 |
+|  |  • Pulse-rhythm (LogReg) and motion (boosted trees) branches       |                 |
+|  |  • Bounded-evidence fusion, watchdog, two-sensor rule, interlock   |                 |
+|  |  • SecOC profile 1 (AES-128-CMAC, 24-bit MAC, 8-bit freshness)     |                 |
 |  +-----------------------------------+--------------------------------+                 |
 |                                      |                                                  |
 |                  Isolated SPI Bus    |                                                  |
@@ -199,31 +199,23 @@ $$\text{Decomposition Target:} \quad \text{ASIL-B(D)}_{\text{Perception/AI}} + \
 
 ---
 
-## 6. End-to-End Latency & Empirical Benchmark Validation
+## 6. Evidence and Timing
 
-### 6.1 Measured Execution Latency Distributions (50-Trial Monte Carlo Benchmark)
-Real-time cycle execution latency was measured empirically across a 50-trial multi-seed benchmark (`prototype/results/benchmark_50_trials.csv` and `benchmark_metrics.json`) spanning Normal Driving, Cardiac Syncope, Epileptic Seizure, Optical Blinding, and IMU Disconnect scenarios:
+The synthetic 50-trial benchmark that used to be reported here was produced
+by a classifier whose parameters were set to match the simulator, so its
+100 % figures measured nothing and have been withdrawn. Current evidence:
 
-| Metric | Measured Value | Standard Deviation | 95% Confidence Interval | Specification Deadline | Margin |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Mean Cycle Latency** | **$0.82\text{ ms}$** | $\pm 0.12\text{ ms}$ | $[0.78\text{ ms}, 0.86\text{ ms}]$ | $100.0\text{ ms}$ (10 Hz loop) | **99.18 ms** |
-| **95th Percentile Latency** | **$0.98\text{ ms}$** | — | — | $100.0\text{ ms}$ | **99.02 ms** |
-| **Worst-Case Execution Time (WCET)** | **$20.23\text{ ms}$** | — | Single observed peak | $100.0\text{ ms}$ | **79.77 ms** |
-| **Syncope Mean Detection Delay** | **$3.19\text{ s}$** | $\pm 0.08\text{ s}$ | $[3.14\text{ s}, 3.24\text{ s}]$ | $< 4.5\text{ s}$ | Safe Stop Verified |
-| **Seizure Mean Detection Delay** | **$3.40\text{ s}$** | $\pm 0.14\text{ s}$ | $[3.31\text{ s}, 3.49\text{ s}]$ | $< 5.0\text{ s}$ | Safe Stop Verified |
-| **Optical Spoof Suppression Rate** | **$100.0\%$** | — | 10 / 10 attack trials | $100.0\%$ | Zero False Activations |
-| **Normal False Positive Rate** | **$0.0\%$** | — | 0 / 10 normal trials | $< 0.1\%$ | Zero Phantom Stops |
+| Question | Where the answer is | How it is produced |
+| :--- | :--- | :--- |
+| Detection accuracy, false MRM starts per hour of real driving, latency | `prototype/results/fusion_metrics.json` | `experiments/realdata/evaluate_fusion.py` on PhysioNet recordings, out-of-fold |
+| Cardiac branch AUC and recall; injected-jerk motion baseline | `prototype/results/branch_metrics.json` | `experiments/realdata/train_branches.py` |
+| Deployed motion branch (recorded motion only): alarms per hour, recorded-mimic detection, sensitivity vs modelled amplitude | `prototype/results/motion_real.json` | `experiments/realdata/train_motion_real.py` |
+| Sensor, processing, communication, tamper, replay and unauthorized-command handling | `prototype/results/fault_matrix.json` | `experiments/fault_matrix.py`, 14 cases x 10 seeds |
+| Cycle compute time against the 100 ms deadline | `fault_matrix.json` (`cycle_compute_ms`) and the `run_realtime.py` summary | measured on the development laptop; must be re-measured on the target host |
 
-### 6.2 Analytical Pipeline Latency Breakdown
-The table below contrasts theoretical worst-case timing allocations with empirical measurements:
-
-| Processing Stage | Mechanism / Algorithm | Execution Type | Theoretical Upper Bound | Measured Mean Latency |
-| :--- | :--- | :--- | :--- | :--- |
-| **1. Sensor Ingestion** | Camera frame exposure + IMU FIFO buffer | Hardware I/O | $16.6\text{ ms}$ | $10.0\text{ ms}$ (at 100 Hz IMU buffer) |
-| **2. Feature Extraction** | Welch tri-axial PSD sum + PSI + GCS | Python/C extension | $15.0\text{ ms}$ | $0.48\text{ ms}$ |
-| **3. Bayesian Classification** | Prior-weighted multi-class likelihood log-sum | Vectorized math | $2.0\text{ ms}$ | $0.18\text{ ms}$ |
-| **4. Watchdog Verification** | Concordance checks + persistence timer ($T_{\text{ver}}$) | State machine | $2,000.0\text{ ms}$ (fixed window) | $2,000.0\text{ ms}$ (calibrated window) |
-| **5. SecOC Authentication** | RFC 4493 AES-128-CMAC generation | Pure-Python (PoC) | $5.0\text{ ms}$ | $0.12\text{ ms}$ |
-| **6. CAN-FD Serialization** | 64-byte frame serialization | Bit packing | $1.0\text{ ms}$ | $0.04\text{ ms}$ |
-| **7. Actuator Hydraulic Delay** | EBS brake pressure build-up to $-3.2\text{ m/s}^2$ | Hydraulic valve | $65.0\text{ ms}$ | $65.0\text{ ms}$ (nominal EBS spec) |
-| **Total Computation Cycle** | Stages 2, 3, 5, 6 per step | Software loop | **$< 25.0\text{ ms}$** | **$0.82\text{ ms}$ (Mean) / $0.98\text{ ms}$ (P95)** |
+The safety-relevant latency is dominated by design, not computation: an
+event must hold for 2 s after 8 s evidence averaging, then the driver gets a
+3 s alert before the vehicle is taken over. Cycle compute is a few
+milliseconds with inference pinned to one thread. The Phase 2 bench plan in
+`hardware/README.md` lists the timing measurements to repeat on the target
+processor.

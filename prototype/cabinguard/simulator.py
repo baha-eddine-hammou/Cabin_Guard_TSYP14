@@ -1,184 +1,182 @@
+"""Synthetic multimodal cabin signals for demonstrations and regression tests.
+
+The simulator emits exactly what the hardware front ends emit (``SensorSnapshot``):
+pulse beat times from the camera, a 100 Hz acceleration window in g from the
+headrest IMU, eyelid and head angles, seatback pressure, grip and steering
+torque, each with its own timestamp. Physiology follows the same models as
+the real-data evaluation:
+
+* syncope: a pulseless ventricular arrhythmia at ``EVENT_ONSET_S``, loss of
+  consciousness ``LOC_DELAY_S`` later (head drop, eye closure, hands off);
+* seizure: a tonic phase (clenched grip, eyes half open) followed by clonic
+  jerks after Conradsen et al. (2013), with ictal tachycardia.
+
+These signals are synthetic. They exercise the software path; they are not
+evidence of detection performance, which comes from the PhysioNet experiments.
 """
-CabinGuard-ADI: Multimodal In-Cabin Sensor Stream Simulator
-Simulates realistic time-series signals for camera, headrest IMU, seatback FSR,
-and steering wheel grip across normal driving, clinical crises, and attack scenarios.
-"""
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 from enum import Enum
-import math
+
 import numpy as np
+
 from . import config
+from .motion_features import clonic_waveform
+
+EVENT_ONSET_S = 8.0
+LOC_DELAY_S = 7.0
+TONIC_S = 8.0
+IMU_FS = 100.0
+IMU_WINDOW_S = 2.0
+
 
 class ScenarioType(Enum):
-    NORMAL_DRIVING = "Normal Highway Driving"
-    CARDIAC_SYNCOPE = "Sudden Cardiac Syncope (Atonic Slump)"
-    EPILEPTIC_SEIZURE = "Convulsive Epileptic Seizure (Clonic Spasms)"
-    OPTICAL_BLINDING_ATTACK = "Adversarial Optical Blinding / Spoofing Attack"
-    IMU_HARDWARE_FAULT = "Headrest IMU Disconnect / Hardware Fault"
+    NORMAL_DRIVING = "Normal driving"
+    CARDIAC_SYNCOPE = "Cardiac syncope (pulseless arrhythmia)"
+    EPILEPTIC_SEIZURE = "Convulsive seizure (tonic-clonic)"
+    OPTICAL_BLINDING_ATTACK = "Optical blinding / spoofed pulse loss"
+    IMU_HARDWARE_FAULT = "Headrest IMU disconnect"
+    SEAT_SENSOR_STALE = "Seat sensor data stops arriving"
 
-class SensorMode(Enum):
-    NORMAL = "Normal"
-    SYNCOPE = "Syncope"
-    SEIZURE = "Seizure"
-    ATTACK = "Attack"
-    FAULT = "Fault"
 
 @dataclass
-class SensorFrame:
-    timestamp: float              # Current time in simulation (seconds)
-    mode: SensorMode             # Clinical / fault mode tag for each synthetic frame
-    ear: float                    # Eye Aspect Ratio [0.0 - 0.45]
-    pitch_deg: float              # Cranial pitch angle in degrees [-90 to +90]
-    optical_snr_db: float         # Camera signal-to-noise ratio in dB
-    face_detected: bool           # Face landmark tracking status
-    rppg_hr_bpm: float            # Contactless optical heart rate estimation
-    imu_accel_window: np.ndarray  # Raw headrest tri-axial acceleration window (Nx3, 100 Hz)
-    imu_gyro_window: np.ndarray | None = None
-    imu_heartbeat_ok: bool = True # I2C communication heartbeat status
-    fsr_pressure: float = 0.0    # Instantaneous normalized seatback pressure [0.0 - 1.0]
-    wheel_grip: str = "ACTIVE"    # "ACTIVE", "DISENGAGED", "CLENCHED"
-    steering_torque_nm: float = 0.0 # Driver manual steering torque in Nm
-    brake_pedal_pressed: bool = False # Manual brake override pedal status
+class SensorSnapshot:
+    t: float
+    # camera
+    camera_t: float | None = None
+    face_detected: bool = True
+    optical_snr_db: float = 10.0
+    ear: float | None = None
+    pitch_deg: float | None = None
+    new_beats: list = field(default_factory=list)
+    # headrest IMU (window in g, ending at imu_t)
+    imu_t: float | None = None
+    imu_window_g: np.ndarray | None = None
+    # seat and wheel
+    seat_t: float | None = None
+    fsr_pressure: float | None = None
+    grip: str | None = None
+    steering_torque_nm: float = 0.0
+    brake_pedal: bool = False
+    truth: str = "Normal"
+
 
 class MultimodalSensorSimulator:
-    """Generates time-aligned multimodal frames at 10 Hz for edge processing."""
-    def __init__(self, scenario: ScenarioType, duration_s: float = 35.0, seed: int = 42):
+    def __init__(self, scenario: ScenarioType, duration_s: float = 40.0, seed: int = 42):
         self.scenario = scenario
         self.duration_s = duration_s
         self.dt = config.FUSION_DT
-        self.total_steps = int(duration_s / self.dt)
         self.rng = np.random.default_rng(seed)
+        self.total_steps = int(round(duration_s / self.dt))
+        self._beats = self._make_beats()
+        self._imu = self._make_imu()
+        self._beat_idx = 0
         self.step_idx = 0
+
+    def __len__(self) -> int:
+        return self.total_steps
 
     def __iter__(self):
         self.step_idx = 0
+        self._beat_idx = 0
         return self
 
-    def __next__(self) -> SensorFrame:
+    def __next__(self) -> SensorSnapshot:
         if self.step_idx >= self.total_steps:
             raise StopIteration
-
-        t = self.step_idx * self.dt
-        frame = self._generate_frame_at_time(t)
+        t = (self.step_idx + 1) * self.dt
         self.step_idx += 1
-        return frame
+        return self._snapshot(t)
 
-    def _generate_frame_at_time(self, t: float) -> SensorFrame:
-        event_onset_t = 4.0  # Acute event initiates at t = 4.0s
-        is_event_active = (t >= event_onset_t)
+    # --------------------------------------------------------- signals ---
+    def _make_beats(self) -> np.ndarray:
+        """Pulse beat times as an rPPG front end would report them."""
+        rng, beats, t = self.rng, [], -12.0
+        while t < self.duration_s + 1:
+            hr = 72.0 + 3.0 * np.sin(2 * np.pi * t / 20.0)
+            if self.scenario == ScenarioType.EPILEPTIC_SEIZURE and t >= EVENT_ONSET_S:
+                hr = 72.0 + min(1.0, (t - EVENT_ONSET_S) / 10.0) * 50.0      # ictal tachycardia
+            if self.scenario == ScenarioType.CARDIAC_SYNCOPE and t >= EVENT_ONSET_S:
+                break                                                      # no perfusing pulse
+            if self.scenario == ScenarioType.OPTICAL_BLINDING_ATTACK and t >= EVENT_ONSET_S:
+                t += 60.0 / hr                                             # pulse exists, camera cannot see it
+                continue
+            t += 60.0 / hr * (1 + rng.normal(0, 0.03))
+            if rng.random() > 0.03:                                        # rPPG misses ~3 % of beats
+                beats.append(t + rng.normal(0, 0.02))
+        return np.array(beats)
 
-        # Baseline Road Vibration for Headrest IMU (100 Hz buffer for 1.0 second = 100 samples)
-        n_samples = int(config.SAMPLE_RATE_IMU_HZ * 1.0)
-        t_imu = np.linspace(t - 1.0, t, n_samples)
-        # Low frequency chassis rumble (0.5 - 2 Hz) + broad dispersion
-        chassis_rumble_x = 0.25 * np.sin(2 * np.pi * 1.2 * t_imu) + self.rng.normal(0, 0.15, n_samples)
-        chassis_rumble_y = 0.20 * np.cos(2 * np.pi * 1.5 * t_imu) + self.rng.normal(0, 0.12, n_samples)
-        chassis_rumble_z = 9.81 + 0.30 * np.sin(2 * np.pi * 0.8 * t_imu) + self.rng.normal(0, 0.20, n_samples)
-        imu_window = np.column_stack([chassis_rumble_x, chassis_rumble_y, chassis_rumble_z])
-
-        # Default Normal Driving parameters
-        # Natural spontaneous eye blinks (every ~3-4 seconds, lasting 150-250ms)
-        is_blinking = (math.fmod(t, 3.5) < 0.20)
-        ear = 0.10 if is_blinking else float(self.rng.normal(0.31, 0.02))
-        pitch_deg = float(self.rng.normal(1.5, 3.0))
-        optical_snr_db = float(self.rng.normal(8.5, 1.5))
-        face_detected = True
-        rppg_hr_bpm = float(self.rng.normal(74.0, 2.5))
-        imu_heartbeat_ok = True
-        fsr_pressure = float(np.clip(self.rng.normal(0.85, 0.03), 0.0, 1.0)) # Normal back contact
-        wheel_grip = "ACTIVE"
-        steering_torque_nm = float(self.rng.normal(0.4, 0.15))
-        brake_pedal_pressed = False
-
-        # Apply Scenario Injections
-        if self.scenario == ScenarioType.NORMAL_DRIVING:
-            pass  # Retain normal driving baseline throughout
-
-        elif self.scenario == ScenarioType.CARDIAC_SYNCOPE:
-            if is_event_active:
-                progress = min(1.0, (t - event_onset_t) / 2.0) # Complete slump within 2.0s
-                # Loss of consciousness: permanent eye closure
-                ear = float(0.31 * (1.0 - progress) + 0.06 * progress + self.rng.normal(0, 0.01))
-                # Severe forward cranial slump
-                pitch_deg = float(1.5 * (1.0 - progress) - 34.0 * progress + self.rng.normal(0, 1.0))
-                # Cardiogenic bradycardia / asystolic collapse
-                rppg_hr_bpm = float(74.0 * (1.0 - progress) + 32.0 * progress + self.rng.normal(0, 1.5))
-                # Torso falls forward away from seatback
-                fsr_pressure = float(0.85 * (1.0 - progress) + 0.08 * progress + self.rng.normal(0, 0.02))
-                # Hands slip completely off the steering wheel
-                wheel_grip = "DISENGAGED" if progress > 0.4 else "ACTIVE"
-                steering_torque_nm = float(0.4 * (1.0 - progress) + self.rng.normal(0, 0.02))
-
-        elif self.scenario == ScenarioType.EPILEPTIC_SEIZURE:
-            if is_event_active:
-                progress = min(1.0, (t - event_onset_t) / 1.5)
-                # Rapid erratic eyelid flutter / gaze elevation
-                flutter = 0.12 + 0.14 * np.abs(np.sin(2 * np.pi * 5.0 * t))
-                ear = float(0.31 * (1.0 - progress) + flutter * progress)
-                # Cranial tremor oscillation
-                pitch_deg = float(1.5 + 12.0 * progress * np.sin(2 * np.pi * 3.8 * t) + self.rng.normal(0, 1.5))
-                # Autonomic sympathetic tachycardia
-                rppg_hr_bpm = float(74.0 * (1.0 - progress) + 128.0 * progress + self.rng.normal(0, 2.0))
-                # Convulsive 3.5 Hz clonic motor spasms injected directly into Headrest Accelerometer
-                clonic_spasm_x = 3.2 * progress * np.sin(2 * np.pi * 3.6 * t_imu)
-                clonic_spasm_y = 2.8 * progress * np.cos(2 * np.pi * 3.6 * t_imu)
-                imu_window[:, 0] += clonic_spasm_x
-                imu_window[:, 1] += clonic_spasm_y
-                # Spasmodic torso contact
-                fsr_pressure = float(0.85 - 0.45 * progress + 0.15 * np.sin(2 * np.pi * 3.6 * t))
-                # Clenched motor lock on steering wheel
-                wheel_grip = "CLENCHED" if progress > 0.3 else "ACTIVE"
-                steering_torque_nm = float(0.4 + 1.2 * progress + self.rng.normal(0, 0.1))
-
-        elif self.scenario == ScenarioType.OPTICAL_BLINDING_ATTACK:
-            if is_event_active:
-                # Adversarial optical blinding / direct laser attack
-                optical_snr_db = -22.5 + float(self.rng.normal(0, 1.0)) # SNR drops far below -15 dB
-                face_detected = False
-                # Attacker injects a synthetic optical pulse of 0 BPM (spoofed cardiac standstill)
-                rppg_hr_bpm = 0.0
-                ear = 0.0
-                # BUT Driver is completely healthy: actively steering and gripping the wheel!
-                wheel_grip = "ACTIVE"
-                steering_torque_nm = 2.1 + float(self.rng.normal(0, 0.2)) # Active driver counter-steering
-                fsr_pressure = 0.88 # Firm torso support
-                pitch_deg = 2.0
-
-        elif self.scenario == ScenarioType.IMU_HARDWARE_FAULT:
-            if is_event_active:
-                # Headrest accelerometer I2C bus wiring failure
-                imu_heartbeat_ok = False
-                imu_window = np.zeros_like(imu_window) # Frozen / zero sensor output
-
-        # Clamp physical values
-        ear = float(np.clip(ear, 0.0, 0.45))
-        fsr_pressure = float(np.clip(fsr_pressure, 0.0, 1.0))
-        rppg_hr_bpm = float(max(0.0, rppg_hr_bpm))
-
-        mode = SensorMode.NORMAL
+    def _make_imu(self) -> np.ndarray:
+        """Road vibration plus event motion, 100 Hz, in g, from t = -2 s."""
+        n = int((self.duration_s + IMU_WINDOW_S) * IMU_FS)
+        rng = self.rng
+        white = rng.normal(0, 1, (n, 3))
+        # broadband seat vibration with most energy above 8 Hz, plus slow sway
+        k = np.ones(3) / 3
+        hf = np.stack([np.convolve(white[:, i], k, "same") for i in range(3)], 1) * 0.03
+        tt = np.arange(n) / IMU_FS
+        sway = 0.02 * np.stack([np.sin(2 * np.pi * 0.3 * tt), np.cos(2 * np.pi * 0.2 * tt), 0 * tt], 1)
+        acc = hf + sway
+        on = int((EVENT_ONSET_S + IMU_WINDOW_S) * IMU_FS)
+        if self.scenario == ScenarioType.EPILEPTIC_SEIZURE:
+            c = on + int(TONIC_S * IMU_FS)
+            acc[c:] += clonic_waveform((n - c) / IMU_FS, IMU_FS, 0.3, 0.08, np.log(1 / 0.08) / 40, rng)
         if self.scenario == ScenarioType.CARDIAC_SYNCOPE:
-            mode = SensorMode.SYNCOPE
-        elif self.scenario == ScenarioType.EPILEPTIC_SEIZURE:
-            mode = SensorMode.SEIZURE
-        elif self.scenario == ScenarioType.OPTICAL_BLINDING_ATTACK:
-            mode = SensorMode.ATTACK
-        elif self.scenario == ScenarioType.IMU_HARDWARE_FAULT:
-            mode = SensorMode.FAULT
+            s = on + int(LOC_DELAY_S * IMU_FS)
+            slump = np.exp(-np.arange(int(0.6 * IMU_FS)) / 15.0) * np.sin(np.arange(int(0.6 * IMU_FS)) / 4.0)
+            acc[s:s + slump.size, 0] += 0.4 * slump                       # one forward slump transient
+        return acc
 
-        return SensorFrame(
-            timestamp=t,
-            mode=mode,
-            ear=ear,
-            pitch_deg=pitch_deg,
-            optical_snr_db=optical_snr_db,
-            face_detected=face_detected,
-            rppg_hr_bpm=rppg_hr_bpm,
-            imu_accel_window=imu_window,
-            imu_gyro_window=np.zeros_like(imu_window),
-            imu_heartbeat_ok=imu_heartbeat_ok,
-            fsr_pressure=fsr_pressure,
-            wheel_grip=wheel_grip,
-            steering_torque_nm=steering_torque_nm,
-            brake_pedal_pressed=brake_pedal_pressed
-        )
+    # -------------------------------------------------------- snapshot ---
+    def _snapshot(self, t: float) -> SensorSnapshot:
+        rng, sc = self.rng, self.scenario
+        ev = t >= EVENT_ONSET_S
+        snap = SensorSnapshot(t=t, camera_t=t, imu_t=t, seat_t=t)
+        # camera
+        blink = (t % 3.7) < 0.2
+        snap.ear = 0.10 if blink else float(rng.normal(0.30, 0.02))
+        snap.pitch_deg = float(rng.normal(0.0, 3.0))
+        snap.optical_snr_db = float(rng.normal(10.0, 1.0))
+        while self._beat_idx < self._beats.size and self._beats[self._beat_idx] <= t:
+            snap.new_beats.append(float(self._beats[self._beat_idx]))
+            self._beat_idx += 1
+        # imu
+        end = int((t + IMU_WINDOW_S) * IMU_FS)
+        snap.imu_window_g = self._imu[end - int(IMU_WINDOW_S * IMU_FS):end]
+        # seat and wheel
+        snap.fsr_pressure = float(np.clip(rng.normal(0.85, 0.03), 0, 1))
+        snap.grip = "ACTIVE"
+        snap.steering_torque_nm = float(rng.normal(0.4, 0.15))
 
+        if sc == ScenarioType.CARDIAC_SYNCOPE and ev:
+            snap.truth = "Syncope"
+            if t >= EVENT_ONSET_S + LOC_DELAY_S:
+                p = min(1.0, (t - EVENT_ONSET_S - LOC_DELAY_S) / 1.5)
+                snap.ear = float(0.30 * (1 - p) + 0.06 * p + rng.normal(0, 0.01))
+                snap.pitch_deg = float(-32.0 * p + rng.normal(0, 2.0))
+                snap.fsr_pressure = float(np.clip(0.85 * (1 - p) + 0.15 * p + rng.normal(0, 0.03), 0, 1))
+                snap.grip = "DISENGAGED" if p > 0.4 else "ACTIVE"
+                snap.steering_torque_nm = float(abs(rng.normal(0.05, 0.03)))
+        elif sc == ScenarioType.EPILEPTIC_SEIZURE and ev:
+            snap.truth = "Seizure"
+            p = min(1.0, (t - EVENT_ONSET_S) / 1.5)
+            snap.ear = float(0.30 * (1 - p) + (0.14 + 0.08 * abs(np.sin(2 * np.pi * 3 * t))) * p)
+            snap.pitch_deg = float(12.0 * p * np.sin(2 * np.pi * 3.0 * t) + rng.normal(0, 2.0))
+            snap.fsr_pressure = float(np.clip(0.85 - 0.4 * p + 0.1 * np.sin(2 * np.pi * 3.0 * t), 0, 1))
+            snap.grip = "CLENCHED" if p > 0.3 else "ACTIVE"
+            snap.steering_torque_nm = float(0.4 + 4.5 * p * abs(np.sin(2 * np.pi * 3.0 * t)))
+        elif sc == ScenarioType.OPTICAL_BLINDING_ATTACK and ev:
+            # A laser saturates the sensor: the face is still found (bright,
+            # over-exposed) but the pulse disappears and eyes read as closed.
+            snap.optical_snr_db = float(rng.normal(-5.0, 1.0))
+            snap.ear = 0.05
+            snap.steering_torque_nm = float(2.1 + rng.normal(0, 0.2))
+        elif sc == ScenarioType.IMU_HARDWARE_FAULT and ev:
+            snap.imu_t = EVENT_ONSET_S                                     # last sample ever received
+            snap.imu_window_g = None
+        elif sc == ScenarioType.SEAT_SENSOR_STALE and ev:
+            snap.seat_t = EVENT_ONSET_S
+            snap.fsr_pressure, snap.grip = None, None
+        snap.ear = float(np.clip(snap.ear, 0.0, 0.45))
+        return snap

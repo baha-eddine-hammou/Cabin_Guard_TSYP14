@@ -1,125 +1,140 @@
+"""Cross-sensor watchdog: degraded modes, anti-spoofing, and the MRM decision.
+
+Every 100 ms cycle:
+
+1. Mode from sensor availability: Nominal; Degraded 1 (camera lost: no rPPG,
+   no eyelid or head data); Degraded 2 (IMU lost); Degraded 3, Minimum (fewer
+   than two physical sensors), in which no automated manoeuvre may start and
+   the driver is warned instead.
+2. Contradiction interlock: the camera reporting no pulse or closed eyes
+   while the seat and wheel show an upright driver actively steering is
+   physically implausible (optical blinding, spoofing, or rPPG failure). The
+   camera is distrusted for ``DISTRUST_S`` and the event is logged.
+3. Branch evidence is averaged over ``SMOOTH_S`` (brief confounders such as
+   a glance down or a pothole fade, sustained events do not) and fused.
+4. An MRM is requested when one event class holds posterior >= Gamma for
+   ``VERIFICATION_DURATION_S`` with evidence from at least two physical
+   sensors.
 """
-CabinGuard-ADI: Cross-Sensor Plausibility & Anti-Spoofing Watchdog (Algorithm 1)
-Implements ISO 26262 ASIL-D-oriented fault mitigation, optical anti-spoofing,
-Degraded Modes 1 & 2, and Seizure-Aware Override Suppression.
-"""
+from __future__ import annotations
+
+from collections import deque
 from dataclasses import dataclass
-from typing import Optional
-from .feature_extraction import ProcessedFeatures
-from .classifier import BayesianEtiologyClassifier, ClassificationResult
+
+import numpy as np
+
 from . import config
+from .feature_extraction import CycleFeatures
+from .fusion import CLASSES, FusionClassifier, FusionResult
+
+SMOOTH_S = 2.0
+DISTRUST_S = 10.0
+SPOOF_PULSE_ABSENT = 0.8
+SPOOF_EAR_CLOSED = 0.12
+UPRIGHT_PSI = 0.35
+MODES = ("Nominal", "Degraded 1 (camera lost)", "Degraded 2 (IMU lost)", "Degraded 3 (minimum)")
+
 
 @dataclass
 class WatchdogDecision:
-    operational_mode: str          # "Nominal Mode", "Degraded Mode 1", "Degraded Mode 2"
-    active_class: str              # "Normal", "Syncope", "Seizure"
-    mrm_trigger_flag: bool         # True when emergency verified
-    laser_spoofing_detected: bool  # Interlock flag suppressing false activation
-    override_suppressed: bool      # Involuntary clonic spasm blocked from cancelling MRM
-    persistence_seconds: float     # Consecutive time candidate >= Gamma
-    candidate_class: str           # Current unverified top class
-    top_confidence: float          # Posterior confidence of candidate
-    shannon_entropy: float         # Predictive uncertainty
-    raw_classification: ClassificationResult
+    mode: str
+    degraded_level: int
+    active_class: str
+    mrm_trigger_flag: bool
+    spoofing_detected: bool
+    override_suppressed: bool
+    persistence_seconds: float
+    candidate_class: str
+    top_confidence: float
+    shannon_entropy: float
+    corroborating_sensors: tuple
+    raw: FusionResult
+
+    @property
+    def operational_mode(self) -> str:
+        return self.mode
+
 
 class CrossSensorWatchdog:
-    """Algorithm 1 runtime implementation executed on every 100 ms fusion cycle."""
-    def __init__(self, classifier: Optional[BayesianEtiologyClassifier] = None):
-        self.classifier = classifier or BayesianEtiologyClassifier()
+    def __init__(self, classifier: FusionClassifier | None = None, smooth_s: float = SMOOTH_S):
+        self.classifier = classifier or FusionClassifier()
+        self.window = max(1, int(round(smooth_s / config.FUSION_DT)))
+        self.hist: dict[str, deque] = {}
         self.t_persist = 0.0
-        self.candidate_class = "Normal"
-        self.security_event_log = []
+        self.candidate = "Normal"
+        self.distrust_camera_until = -1.0
+        self.security_log: list[str] = []
 
-    def evaluate(self, feat: ProcessedFeatures) -> WatchdogDecision:
-        operational_mode = "Nominal Mode"
-        degraded_mode_1 = False
-        degraded_mode_2 = False
-        laser_spoofing_detected = False
-        override_suppressed = False
+    def _spoof_check(self, f: CycleFeatures) -> bool:
+        if not f.camera_ok or not f.seat_ok:
+            return False
+        camera_says_down = ((f.cardiac is not None and f.cardiac.pulse_absent >= SPOOF_PULSE_ABSENT)
+                            or (f.fusion.ear is not None and f.fusion.ear <= SPOOF_EAR_CLOSED
+                                and f.fusion.pitch_deg is not None and f.fusion.pitch_deg > -10))
+        seat_says_driving = (f.grip == "ACTIVE" and abs(f.steering_torque_nm) > config.SPOOF_HR_MIN_TORQUE_NM
+                             and f.fusion.psi is not None and f.fusion.psi < UPRIGHT_PSI)
+        return camera_says_down and seat_says_driving
 
-        # Line 2-5: Optical signal degradation check
-        if feat.optical_snr_db < config.MIN_OPTICAL_SNR_DB or not feat.face_detected:
-            operational_mode = "Degraded Mode 1"
-            degraded_mode_1 = True
-
-        # Line 6-9: Headrest IMU heartbeat check
-        if not feat.imu_heartbeat_ok:
-            operational_mode = "Degraded Mode 2"
-            degraded_mode_2 = True
-
-        # Compute Bayesian classification with active degraded mode flags
-        clf_result = self.classifier.classify(
-            feat,
-            degraded_mode_1=degraded_mode_1,
-            degraded_mode_2=degraded_mode_2
-        )
-
-        # Line 10-14: Anti-Spoofing Interlock
-        # If camera reports cardiac arrest (0 BPM) but driver has active grip and is counter-steering
-        if feat.rppg_hr_bpm < 1.0 and feat.wheel_grip == "ACTIVE" and feat.steering_torque_nm > config.SPOOF_HR_MIN_TORQUE_NM:
-            laser_spoofing_detected = True
-            log_entry = (
-                f"[SECURITY EXCEPTION t={feat.timestamp:.2f}s] Optical Laser Spoofing Intercepted: "
-                f"rPPG=0 BPM vs Grip=ACTIVE, Torque={feat.steering_torque_nm:.2f} Nm. MRM Suppressed."
-            )
-            self.security_event_log.append(log_entry)
-            self.t_persist = 0.0
-            self.candidate_class = "Normal"
-
-            return WatchdogDecision(
-                operational_mode=operational_mode,
-                active_class="Normal",
-                mrm_trigger_flag=False,
-                laser_spoofing_detected=True,
-                override_suppressed=False,
-                persistence_seconds=0.0,
-                candidate_class="Normal",
-                top_confidence=clf_result.top_confidence,
-                shannon_entropy=clf_result.shannon_entropy,
-                raw_classification=clf_result
-            )
-
-        # Seizure-Aware Override Suppression Check (Clinical Engagement Consultation 3)
-        # If driver steering torque > 4.0 Nm occurs during high-frequency motor tremors (SER > 0.65)
-        # or clenched grip, it is an involuntary ictal spasm, not conscious driver intent.
-        if feat.steering_torque_nm > config.DRIVER_OVERRIDE_TORQUE_NM:
-            if feat.ser_2_6hz >= config.SEIZURE_OVERRIDE_SUPPRESSION_SER or feat.wheel_grip == "CLENCHED":
-                override_suppressed = True
-
-        # Line 15-23: Confidence & Persistence Timing Verification Window (T_ver = 2.0s)
-        current_top_class = clf_result.predicted_class
-        current_top_conf = clf_result.top_confidence
-
-        if current_top_conf >= config.CONFIDENCE_THRESHOLD_GAMMA and current_top_class != "Normal":
-            if current_top_class == self.candidate_class:
-                self.t_persist = min(
-                    config.VERIFICATION_DURATION_S,
-                    self.t_persist + config.FUSION_DT,
-                )
-            else:
-                self.candidate_class = current_top_class
-                self.t_persist = config.FUSION_DT
+    def evaluate(self, f: CycleFeatures) -> WatchdogDecision:
+        spoof = self._spoof_check(f)
+        if spoof:
+            if f.t >= self.distrust_camera_until:
+                self.security_log.append(
+                    f"t={f.t:.1f}s camera contradicts seat and wheel (no pulse or closed eyes while steering "
+                    f"{f.steering_torque_nm:.1f} Nm upright); camera distrusted for {DISTRUST_S:.0f} s")
+            self.distrust_camera_until = f.t + DISTRUST_S
+        camera_ok = f.camera_ok and f.t >= self.distrust_camera_until
+        sensors = [n for n, ok in (("camera", camera_ok), ("imu", f.imu_ok), ("seat", f.seat_ok)) if ok]
+        if len(sensors) < 2:
+            level = 3
+        elif not camera_ok:
+            level = 1
+        elif not f.imu_ok:
+            level = 2
         else:
-            self.candidate_class = current_top_class
-            self.t_persist = 0.0
+            level = 0
 
-        # Check if persistence duration reaches T_ver
-        if self.t_persist >= config.VERIFICATION_DURATION_S:
-            active_class = self.candidate_class
-            mrm_trigger = (active_class != "Normal")
+        x = f.fusion
+        if not camera_ok:
+            x = type(x)(cardiac=None, motion=x.motion, ear=None, pitch_deg=None, psi=x.psi, grip=x.grip)
+        clf = self.classifier
+        ev = clf.batch_evidence(
+            cardiac=None if x.cardiac is None else x.cardiac.vector()[None],
+            motion=None if x.motion is None else x.motion.vector()[None],
+            ear=None if x.ear is None else [x.ear], pitch=None if x.pitch_deg is None else [x.pitch_deg],
+            psi=None if x.psi is None else [x.psi], grip=None if x.grip is None else [x.grip])
+        # Smooth each branch over the recent window; a branch that drops out
+        # loses its history so stale evidence cannot linger.
+        for b in list(self.hist):
+            if b not in ev:
+                del self.hist[b]
+        smoothed = {}
+        for b, v in ev.items():
+            h = self.hist.setdefault(b, deque(maxlen=self.window))
+            h.append(v[0])
+            smoothed[b] = np.mean(h, axis=0)[None]
+        post, corro = clf.combine(smoothed, 1)
+        k = int(post[0].argmax())
+        top, conf = CLASSES[k], float(post[0, k])
+        n_sensors = int(corro[0, k])
+        result = FusionResult(dict(zip(CLASSES, map(float, post[0]))), top, conf,
+                              float(-sum(p * np.log2(p) for p in post[0] if p > 0)),
+                              {b: dict(zip(CLASSES, map(float, v[0]))) for b, v in smoothed.items()})
+        corroborating = tuple(sorted(result.corroborating_sensors(top)))
+
+        qualifies = top != "Normal" and conf >= config.CONFIDENCE_THRESHOLD_GAMMA and n_sensors >= 2 and level < 3
+        if qualifies and top == self.candidate:
+            self.t_persist = min(config.VERIFICATION_DURATION_S, self.t_persist + config.FUSION_DT)
+        elif qualifies:
+            self.candidate, self.t_persist = top, config.FUSION_DT
         else:
-            active_class = "Normal"
-            mrm_trigger = False
+            self.candidate, self.t_persist = "Normal", 0.0
+        trigger = self.t_persist >= config.VERIFICATION_DURATION_S - 1e-9
+        active = self.candidate if trigger else "Normal"
 
-        return WatchdogDecision(
-            operational_mode=operational_mode,
-            active_class=active_class,
-            mrm_trigger_flag=mrm_trigger,
-            laser_spoofing_detected=False,
-            override_suppressed=override_suppressed,
-            persistence_seconds=self.t_persist,
-            candidate_class=self.candidate_class,
-            top_confidence=current_top_conf,
-            shannon_entropy=clf_result.shannon_entropy,
-            raw_classification=clf_result
-        )
+        # An involuntary clonic jerk or a clenched grip must not count as the
+        # driver taking the wheel back.
+        seizure_motion = "motion" in smoothed and smoothed["motion"][0, CLASSES.index("Seizure")] >= 1.0
+        suppress = abs(f.steering_torque_nm) > config.DRIVER_OVERRIDE_TORQUE_NM and (seizure_motion or f.grip == "CLENCHED")
+        return WatchdogDecision(MODES[level], level, active, trigger, spoof, suppress, self.t_persist,
+                                self.candidate, conf, result.shannon_entropy, corroborating, result)

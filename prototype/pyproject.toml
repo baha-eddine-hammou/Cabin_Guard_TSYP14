@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cabinguard"
+version = "0.2.0"
+description = "CabinGuard-ADI: in-cabin acute driver incapacitation detection prototype"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "scikit-learn==1.6.1",    # pinned: saved models must load where they were trained (Colab) and on the target
+    "joblib>=1.3",
+    "threadpoolctl>=3.1",
+    "pandas>=2.0",
+    "cryptography>=42.0",
+    "wfdb>=4.1",
+    "matplotlib>=3.8",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+# mediapipe 0.10.30+ (Tasks FaceLandmarker; numpy 2). It depends on opencv-contrib-python: never add opencv-python too.
+hardware = ["python-can>=4.3", "cantools>=39.0", "pyserial>=3.5", "mediapipe>=0.10.30", "opencv-contrib-python>=4.8"]
+# jury demo: local web dashboard
+demo = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12"]
+dev = ["pytest>=8.0", "python-can>=4.3", "cantools>=39.0", "httpx>=0.27"]
+
+[tool.setuptools.packages.find]
+include = ["cabinguard*"]
+
+[tool.setuptools.package-data]
+"cabinguard.demo" = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

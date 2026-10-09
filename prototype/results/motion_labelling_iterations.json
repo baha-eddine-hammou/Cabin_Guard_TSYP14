@@ -1,0 +1,59 @@
+{
+  "note": "Successive labellings of SeizeIT2 training positives, each chosen after seeing the previous run's held-out results; kept so the paper can report the iteration. The run in results/motion_real.json is the current one.",
+  "iterations": [
+    {
+      "labelling": "every window inside a motor seizure annotation",
+      "run": "Claude session, before the Colab rule",
+      "seizeit2_detected": {
+        "automatisms": "8/67",
+        "convulsive": "43/52",
+        "hyperkinetic": "34/269",
+        "non-motor": "13/256",
+        "tonic or clonic": "3/29",
+        "unclassified": "5/96"
+      },
+      "seizeit2_background_alarms_per_hour": 3.31,
+      "driving_alarms_per_hour": {
+        "lh": 3.18,
+        "lw": 1.35
+      },
+      "har_window_rate_max": 0.0772
+    },
+    {
+      "labelling": "motor ictal windows above 2x the pre-ictal RMS",
+      "run": "Colab",
+      "seizeit2_detected": {
+        "automatisms": "20/67",
+        "convulsive": "49/52",
+        "hyperkinetic": "95/270",
+        "non-motor": "40/283",
+        "tonic or clonic": "9/29",
+        "unclassified": "18/97"
+      },
+      "seizeit2_background_alarms_per_hour": 9.08,
+      "driving_alarms_per_hour": {
+        "lh": 9.93,
+        "lw": 4.63
+      },
+      "har_window_rate_max": 0.2302
+    },
+    {
+      "labelling": "motor ictal windows above 2x the pre-ictal RMS and above the median hip driving RMS (0.030 g)",
+      "run": "Colab (current results/motion_real.json)",
+      "seizeit2_detected": {
+        "automatisms": "6/67",
+        "convulsive": "42/52",
+        "hyperkinetic": "40/270",
+        "non-motor": "10/283",
+        "tonic or clonic": "4/29",
+        "unclassified": "15/97"
+      },
+      "seizeit2_background_alarms_per_hour": 6.59,
+      "driving_alarms_per_hour": {
+        "lh": 9.74,
+        "lw": 6.85
+      },
+      "har_window_rate_max": 0.017
+    }
+  ]
+}
