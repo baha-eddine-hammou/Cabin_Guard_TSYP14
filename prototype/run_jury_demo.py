@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import socket
 import threading
 import time
 import webbrowser
@@ -21,6 +22,31 @@ from pathlib import Path
 from run_realtime import load_key
 
 ROOT = Path(__file__).resolve().parent
+DEVICE_WAIT_S = 6.0          # a Windows camera can take several seconds to deliver its first frame
+
+
+def port_free(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+def wait_for_devices(camera, node) -> str | None:
+    """Wait until every opened device has delivered data; return an error message if one never does."""
+    deadline = time.perf_counter() + DEVICE_WAIT_S
+    while time.perf_counter() < deadline:
+        cam_ok = camera is None or camera.frames > 0
+        node_ok = node is None or node.last is not None
+        if cam_ok and node_ok:
+            time.sleep(2.5 if node is not None else 0.5)      # fill the 2 s IMU window
+            return None
+        time.sleep(0.1)
+    if camera is not None and camera.frames == 0:
+        return "no frames from the camera (wrong --camera index, or another app holds it)"
+    return "no valid frames from the ESP32 sensor node (wrong --serial port, baud rate or firmware)"
 
 
 def main() -> None:
@@ -39,6 +65,8 @@ def main() -> None:
     from cabinguard.demo.runner import DemoRunner
     from cabinguard.demo.server import create_app
 
+    if not port_free(args.port):
+        raise SystemExit(f"port {args.port} is in use (another demo still running?); try --port {args.port + 1}")
     key = load_key(args.key_file) if args.key_file else DEMO_KEY
     camera = node = None
     if args.camera is not None:
@@ -47,19 +75,31 @@ def main() -> None:
     if args.serial:
         from cabinguard.hardware import SerialSensorNode
         node = SerialSensorNode(args.serial)
-    if camera or node:
-        time.sleep(2.5)                                   # fill the 2 s IMU window and the camera warm-up
+    if camera is not None or node is not None:
+        error = wait_for_devices(camera, node)
+        if error:
+            for dev in (camera, node):
+                if dev is not None:
+                    dev.close()
+            raise SystemExit(error)
     record = None
     if args.record:
         record = ROOT.parent / "data" / "demo_sessions" / time.strftime("%Y%m%d-%H%M%S.jsonl")
     runner = DemoRunner(DemoEngine(key, camera=camera, node=node, record_path=record)).start()
     url = f"http://127.0.0.1:{args.port}/"
     print(f"CabinGuard demo on {url}  (Ctrl+C to stop)")
+    timer = None
     if not args.no_browser:
-        threading.Timer(1.5, lambda: webbrowser.open(url)).start()
+        timer = threading.Timer(1.5, lambda: webbrowser.open(url))
+        timer.daemon = True
+        timer.start()
     try:
-        uvicorn.run(create_app(runner), host="127.0.0.1", port=args.port, log_level="warning")
+        # the MJPEG stream never ends on its own: bound the graceful shutdown so Ctrl+C always exits
+        uvicorn.run(create_app(runner), host="127.0.0.1", port=args.port, log_level="warning",
+                    timeout_graceful_shutdown=1)
     finally:
+        if timer is not None:
+            timer.cancel()
         runner.stop()
         for dev in (camera, node):
             if dev is not None:

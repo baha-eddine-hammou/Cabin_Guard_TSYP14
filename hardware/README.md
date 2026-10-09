@@ -42,7 +42,8 @@ Steer pot─GPIO32──────┘                    │ cellular / SMS
    Calibrate `TOUCH_THRESHOLD` by printing `touchRead` with and without a hand.
 2. `pip install -e "prototype[hardware]"` on the ECU host.
 3. Generate a SecOC key and copy it to both hosts, never into git:
-   `python -c "import os;print(os.urandom(16).hex())" > secrets/secoc.key`
+   `python -c "import os,pathlib;p=pathlib.Path('secrets/secoc.key');p.parent.mkdir(exist_ok=True);p.write_text(os.urandom(16).hex())"`
+   (written from Python, so PowerShell's UTF-16 redirection cannot corrupt it)
 4. Bring up CAN on Linux: `sudo ip link set can0 up type can bitrate 500000`.
 5. Gateway side: `python run_gateway.py --can socketcan:can0 --key-file secrets/secoc.key`
 6. ECU side: `python run_realtime.py --source hardware --serial /dev/ttyUSB0 --camera 0 --can socketcan:can0 --key-file secrets/secoc.key`

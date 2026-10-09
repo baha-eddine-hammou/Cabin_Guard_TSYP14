@@ -129,3 +129,17 @@ def test_notifier_retries_then_falls_back_then_queues():
         n.step(t, rng, lambda p: delivered.append(p) or True)
         t += 0.1
     assert n.state == "Acknowledged" and delivered == [b"mec"]
+
+
+@pytest.mark.parametrize("encoding", ["utf-8", "utf-8-sig", "utf-16"])
+def test_key_file_accepts_windows_encodings(tmp_path, encoding):
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from run_realtime import load_key
+    key = bytes(range(16, 32))
+    path = tmp_path / "secoc.key"
+    path.write_text(key.hex() + "\r\n", encoding=encoding)       # PowerShell's ">" writes UTF-16 with a BOM
+    assert load_key(str(path)) == key
+    path.write_text("not hex", encoding=encoding)
+    with pytest.raises(SystemExit):
+        load_key(str(path))

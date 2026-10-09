@@ -49,12 +49,74 @@ def test_attack_rejected_and_car_unaffected(attack, verdict):
     assert f"attack:{attack}" not in rec["provenance"]["injected"]       # it ended after ATTACK_S
 
 
+def until_phase(engine, t, phase):
+    rec = None
+    while rec is None or rec["vehicle"]["phase"] < phase:
+        rec, t = run(engine, t, 0.1)
+    return rec, t
+
+
+@pytest.mark.parametrize("phase", [2, 3])
+@pytest.mark.parametrize("attack", ["forge", "implausible"])
+def test_attack_during_manoeuvre_never_takes_over(attack, phase):
+    """A rejected frame must not change the manoeuvre, and genuine ECU frames must keep passing."""
+    e = DemoEngine()
+    _, t = run(e, 100.0, 1.0)
+    e.submit("event", "syncope")
+    rec, t = until_phase(e, t, phase)
+    e.submit("attack", attack)
+    attacker, genuine = set(), set()
+    for _ in range(20):
+        rec, t = run(e, t, 0.1)
+        for row in rec["can"]:
+            if row["id"] == "0x120":
+                (genuine if row["sender"] == "ECU" else attacker).add(row["verdict"])
+        assert rec["vehicle"]["decel"] >= -3.2 - 1e-6           # never the attacker's -4 or -6 m/s^2
+    assert attacker == {"MAC_FAIL" if attack == "forge" else "IMPLAUSIBLE"}
+    assert genuine == {"OK"}
+    assert not rec["vehicle"]["ecu_fault"] and not rec["vehicle"]["fail_operational"]
+
+
+def test_forged_frame_is_never_read_as_replay():
+    e = DemoEngine()
+    _, t = run(e, 100.0, 0.5)
+    for _ in range(3):                                   # the attacker claims the next freshness value each time
+        e.submit("attack", "forge")
+        rec, t = run(e, t, 2.5)
+    assert rec["counters"]["replay"] == 0 and rec["counters"]["mac"] > 0
+
+
+def test_event_onset_on_time_and_stream_outlasts_the_demo():
+    e = DemoEngine()
+    rec, t = run(e, 100.0, 1.0)
+    e.submit("event", "syncope")
+    rec, t = run(e, t, 0.1)                              # the press cycle
+    assert rec["event"]["truth"] == "Normal" and rec["event"]["onset_in_s"] == 1.0
+    rec, t = run(e, t, 0.9)
+    assert rec["event"]["truth"] == "Normal"
+    rec, t = run(e, t, 0.1)
+    assert rec["event"]["truth"] == "Syncope" and rec["event"]["onset_in_s"] == 0.0
+    sim = e.event_stream.sim
+    assert (sim.total_steps - sim.step_idx) * 0.1 > 600  # the driver never "recovers" during questions
+
+
+def test_replay_before_three_seconds_is_not_injected():
+    e = DemoEngine()
+    _, t = run(e, 100.0, 1.0)
+    e.submit("attack", "replay")
+    rec, t = run(e, t, 0.1)
+    assert rec["provenance"]["injected"] == []
+    assert any("replay needs 3 s" in line for line in rec["log"])
+
+
 def test_genuine_frames_verify_and_rows_use_session_time():
     e = DemoEngine()
     rec, _ = run(e, 5000.0, 3.0)
     ids = {r["id"]: r["verdict"] for r in rec["can"]}
-    assert ids == {"0x121": "OK", "0x120": "OK", "0x122": "status (not authenticated)"}
+    assert ids == {"0x121": "OK", "0x120": "OK", "0x122": "IGNORED"}    # 0x122 is a real frame the gateway ignores
     assert all(0.0 <= r["t"] < 3.0 for r in rec["can"])
+    row = next(r for r in rec["can"] if r["id"] == "0x122")
+    assert row["sender"] == "Telematics" and row["signals"].startswith("DENM cause=0 sub=0")
 
 
 def test_faults_toggle_and_reset_is_clean():
@@ -64,6 +126,9 @@ def test_faults_toggle_and_reset_is_clean():
     e.submit("attack", "forge")
     rec, t = run(e, t, 1.0)
     assert rec["provenance"]["injected"] == ["blind", "attack:forge"]
+    ch = rec["provenance"]["channels"]
+    assert ch["face"]["class"] == ch["pulse"]["class"] == ch["seat"]["class"] == "INJECTED"
+    assert ch["imu"]["class"] == "SYNTHETIC"
     assert rec["inputs"]["snr_db"] == -5.0
     assert rec["counters"]["mac"] > 0
     e.submit("fault", "blind")                           # second press switches it off
@@ -86,8 +151,12 @@ def test_ecu_hang_warns_in_normal_driving_and_gateway_finishes_an_mrm():
     e.submit("fault", "ecu_hang")
     rec, t = run(e, t, 3.0)
     assert rec["mrm"]["state"] == "ECU_FAILED" and rec["decision"] is None
+    assert rec["ecu"]["compute_ms"] is None and rec["inputs"]["hr_bpm"] is None   # a failed ECU publishes nothing
     v = rec["vehicle"]
     assert v["ecu_fault"] and not v["hazards"] and v["decel"] == 0.0 and not v["fail_operational"]
+    e.submit("fault", "ecu_hang")                        # releasing the button does not revive a latched ECU
+    rec, t = run(e, t, 0.5)
+    assert rec["mrm"]["state"] == "ECU_FAILED" and "ecu_hang" in rec["provenance"]["injected"]
 
     e.submit("reset")
     rec, t = run(e, t, 1.0)
@@ -98,6 +167,19 @@ def test_ecu_hang_warns_in_normal_driving_and_gateway_finishes_an_mrm():
     rec, t = run(e, t, 40.0)
     v = rec["vehicle"]
     assert v["fail_operational"] and v["hazards"] and v["epb"] and v["speed_kmh"] == 0.0
+
+
+def test_corroboration_is_reported_for_the_class_on_screen():
+    e = DemoEngine()
+    _, t = run(e, 100.0, 1.0)
+    e.submit("event", "seizure")
+    rec, t = run(e, t, 8.0)
+    d = rec["decision"]
+    assert d["shown_class"] in ("Seizure", "Syncope")
+    for c, sensors in d["corroborating_by_class"].items():
+        strong = {b for b, llr in d["branch_llr"].items() if llr[c] >= 1.0}
+        assert set(sensors) == {{"cardiac": "camera", "vision": "camera", "motion": "imu", "posture": "seat"}[b]
+                                for b in strong}
 
 
 def test_script_plays_in_order_and_cues_follow_phases():

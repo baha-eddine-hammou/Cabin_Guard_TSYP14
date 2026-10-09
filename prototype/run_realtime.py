@@ -34,7 +34,13 @@ SCENARIOS = {"normal": ScenarioType.NORMAL_DRIVING, "syncope": ScenarioType.CARD
 
 def load_key(path: str | None) -> bytes:
     if path:
-        key = bytes.fromhex(Path(path).read_text().strip())
+        raw = Path(path).read_bytes()
+        # PowerShell's ">" writes UTF-16 with a byte-order mark; Notepad may add a UTF-8 one
+        text = raw.decode("utf-16") if raw[:2] in (b"\xff\xfe", b"\xfe\xff") else raw.decode("utf-8-sig")
+        try:
+            key = bytes.fromhex(text.strip())
+        except ValueError:
+            key = b""
         if len(key) != 16:
             raise SystemExit("key file must hold 32 hex characters (AES-128)")
         return key

@@ -21,6 +21,7 @@ from __future__ import annotations
 import hashlib
 import json
 import queue
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,7 +29,9 @@ from pathlib import Path
 import numpy as np
 
 from .. import config
-from ..can_messages import HEALTH_ID, MRM_CMD_ID, MRMCommand, MRMCommandTx, decode_health, decode_payload
+from ..can_messages import (HEALTH_ID, MRM_CMD_ID, TELEMATICS_ID, MRMCommand, MRMCommandTx, decode_health,
+                            decode_payload, encode_telematics)
+from ..feature_extraction import MAX_SENSOR_AGE_S
 from ..pipeline import Bus, CabinGuardECU, VehicleSide
 from ..simulator import EVENT_ONSET_S, MultimodalSensorSimulator, ScenarioType, SensorSnapshot
 from ..watchdog import DISTRUST_S
@@ -41,6 +44,9 @@ BASE_DURATION_S = 900.0            # normal-driving stream length before it rest
 EVENTS = {"seizure": ScenarioType.EPILEPTIC_SEIZURE, "syncope": ScenarioType.CARDIAC_SYNCOPE}
 ATTACKS = ("forge", "replay", "tamper", "implausible")
 FAULTS = ("blind", "imu_drop", "seat_freeze", "ecu_hang", "cellular_down")
+REPLAY_AGE = 30                    # the replayed frame was captured this many cycles (3 s) earlier
+# channels whose signals each fault overwrites (blind also overwrites the wheel torque when the seat is simulated)
+FAULT_CHANNELS = {"blind": ("pulse", "face"), "imu_drop": ("imu",), "seat_freeze": ("seat",)}
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -135,8 +141,9 @@ class DemoEngine:
         self._rec = None
         self.provenance_static = {
             "vehicle": "SIM point-mass (kinematic lateral model)", "bus": "SIM in-process",
-            "comms": "SIM bearers + PSAP", "key": "DEMO KEY" if key == DEMO_KEY else "provisioned key",
-            "git": _git_commit(),
+            "comms": "SIM bearers + PSAP",
+            "key": "public demo key" if key == DEMO_KEY else "from file (software key, no HSM)",
+            "recording": record_path is not None, "git": _git_commit(),
             "models": {p.name: _sha256(p) for p in sorted((ROOT / "models").glob("*_branch.joblib"))},
         }
         self.reset()
@@ -165,6 +172,8 @@ class DemoEngine:
         self.can_rows: list[dict] = []
         self._gw_log_seen = 0
         self._sec_log_seen = 0
+        self._notes: list[str] = []
+        self._hang_injected = False       # an ECU failed by the operator stays tagged INJECTED until reset
         self.distance_m = 0.0
 
     def _apply(self, cmd: Command, now: float) -> None:
@@ -174,14 +183,22 @@ class DemoEngine:
         elif cmd.name == "event" and cmd.arg in EVENTS and s.event is None:
             s.event = cmd.arg
             s.event_onset_t = now + EVENT_LEAD_S
-            self.event_stream = SimStream(EVENTS[cmd.arg], self.seed + 7, EVENT_ONSET_S - EVENT_LEAD_S,
-                                          EVENT_ONSET_S + 120.0)
+            # the simulator's first snapshot is at t = dt, so skip one fewer to reach onset exactly at
+            # event_onset_t; the stream is as long as the base stream, so the event never runs out on stage
+            self.event_stream = SimStream(EVENTS[cmd.arg], self.seed + 7,
+                                          EVENT_ONSET_S - EVENT_LEAD_S - config.FUSION_DT,
+                                          EVENT_ONSET_S + BASE_DURATION_S)
             if not s.staged:      # the event's signals come from the scenario on every channel
                 s.modes = {c: "sim" for c in CHANNELS}
         elif cmd.name == "attack" and cmd.arg in ATTACKS:
+            if cmd.arg == "replay" and len(self.genuine) <= REPLAY_AGE:
+                self._notes.append("[demo] replay needs 3 s of captured frames: not injected yet")
+                return
             s.attack, s.attack_until = cmd.arg, now + ATTACK_S
         elif cmd.name == "fault" and cmd.arg in FAULTS:
             s.faults.symmetric_difference_update({cmd.arg})      # toggles
+            if cmd.arg == "ecu_hang" and cmd.arg in s.faults:
+                self._hang_injected = True
         elif cmd.name == "mode" and cmd.arg:
             ch, _, mode = cmd.arg.partition(":")
             if ch in CHANNELS and mode in ("sim", "live") and (mode == "sim" or self._device_for(ch)):
@@ -216,6 +233,8 @@ class DemoEngine:
             if s.modes["face"] == "live":
                 snap.camera_t, snap.face_detected = live.camera_t, live.face_detected
                 snap.optical_snr_db, snap.ear, snap.pitch_deg = live.optical_snr_db, live.ear, live.pitch_deg
+                if live.camera_t is None or now - live.camera_t > MAX_SENSOR_AGE_S:
+                    snap.ear = snap.pitch_deg = None          # a stalled camera shows no eye or head values
             if s.modes["pulse"] == "live":
                 snap.new_beats = live.new_beats
         if self.node is not None and (s.modes["imu"] == "live" or s.modes["seat"] == "live"):
@@ -257,6 +276,8 @@ class DemoEngine:
             self.genuine.append(self.bus.cycle[-1][1])
             del self.genuine[:-200]
         self._inject_attack(now)
+        if self.k % 10 == 0:          # 0x122 status, once a second, unauthenticated; the gateway ignores it
+            self.bus.send(TELEMATICS_ID, self._telematics_payload(), "Telematics")
         frames = list(self.bus.cycle)
         gw = self.vehicle.gateway
         n_before = gw.n_verdicts
@@ -268,8 +289,6 @@ class DemoEngine:
         verdicts = [v[2] for v in new_verdicts] + ["-"] * (len(frames) - len(new_verdicts))
         rel = now - self.t0
         rows = [self._can_row(rel, arb, data, sender, verdict) for (arb, data, sender), verdict in zip(frames, verdicts)]
-        if self.k % 10 == 0:
-            rows.append(self._telematics_row(rel))
         rec = self._record(now, snap, truth, d, g, rows)
         if self.record_path is not None:
             self._write(rec)
@@ -282,16 +301,19 @@ class DemoEngine:
             return
         stop = MRMCommand(phase=3, active=True, hazards=True, decel_mss=-4.0, etiology="Seizure", shoulder=True)
         if s.attack == "forge":                        # an attacker without the key
+            self.attacker.secoc.fv = self.ecu.tx.secoc.fv              # claims the next freshness value
             self.bus.send(MRM_CMD_ID, self.attacker.frame(stop), "ATTACKER")
-        elif s.attack == "replay" and len(self.genuine) > 30:
-            self.bus.send(MRM_CMD_ID, self.genuine[-30], "ATTACKER")        # a frame captured 3 s ago
+        elif s.attack == "replay" and len(self.genuine) > REPLAY_AGE:
+            self.bus.send(MRM_CMD_ID, self.genuine[-REPLAY_AGE], "ATTACKER")    # a frame captured 3 s ago
         elif s.attack == "tamper" and self.genuine:
             g = bytearray(self.genuine[-1])
             g[0] ^= 0x0B                                 # flip phase/active bits of a copied frame
             g[4] = (g[4] + 1) & 0xFF                     # claim the next freshness value
             self.bus.send(MRM_CMD_ID, bytes(g), "ATTACKER")
         elif s.attack == "implausible":                # a compromised ECU: valid key, impossible command
-            self.bus.send(MRM_CMD_ID, self.ecu.tx.frame(stop), "ECU (compromised)")
+            # -6 m/s^2 is beyond the gateway's -4 m/s^2 limit, so the frame is implausible in every phase
+            harsh = MRMCommand(phase=3, active=True, hazards=True, decel_mss=-6.0, etiology="Seizure", shoulder=True)
+            self.bus.send(MRM_CMD_ID, self.ecu.tx.frame(harsh), "ECU (compromised)")
 
     # ------------------------------------------------------------- record ---
     @staticmethod
@@ -308,32 +330,40 @@ class DemoEngine:
             row["name"] = "Health"
             row["signals"] = (f"cam={int(h.camera_ok)} imu={int(h.imu_ok)} seat={int(h.fsr_ok)} "
                               f"degraded={h.degraded_level} overruns={h.deadline_overruns}")
+        elif arb == TELEMATICS_ID:
+            row["name"], row["fv"], row["mac"] = "Telematics_Status", None, ""
+            row["signals"] = f"DENM cause={data[0]} sub={data[1]} MEC state={data[2] & 7} attempts={data[2] >> 3}"
         else:
             row["name"], row["signals"] = "?", data.hex().upper()
         return row
 
-    def _telematics_row(self, t: float) -> dict:
+    def _telematics_payload(self) -> bytes:
         n = self.vehicle.notifier
-        last = n.log[-1][1] if n.log else "None"
-        return {"t": round(t, 2), "id": "0x122", "sender": "Telematics", "fv": None, "mac": "",
-                "name": "Telematics_Status", "verdict": "status (not authenticated)",
-                "signals": f"DENM cause={93 if self.vehicle.denm_sent else 0} sub=0 MEC={n.state} "
-                           f"attempts={n.attempts} bearer={last}"}
+        return encode_telematics(93 if self.vehicle.denm_sent else 0, 0, n.state, n.attempts,
+                                 n.log[-1][1] if n.log else "None")
 
     def _provenance(self) -> dict:
         s, tags = self.state, {}
+        overwritten = {ch: f for f in sorted(s.faults) for ch in FAULT_CHANNELS.get(f, ())}
+        if "blind" in s.faults and s.modes["seat"] == "sim":
+            overwritten.setdefault("seat", "blind")
         for ch in CHANNELS:
-            if s.modes[ch] == "live":
-                tags[ch] = {"class": "LIVE", "detail": "webcam" if ch in ("pulse", "face") else "ESP32 sensor node"}
+            live = s.modes[ch] == "live"
+            if ch in overwritten:
+                tags[ch] = {"class": "INJECTED", "detail": overwritten[ch], "live": live}
+            elif live:
+                tags[ch] = {"class": "LIVE", "detail": "webcam" if ch in ("pulse", "face") else "ESP32 sensor node",
+                            "live": True}
             else:
                 scen = (EVENTS[s.event].value if s.event else ScenarioType.NORMAL_DRIVING.value)
-                tags[ch] = {"class": "SYNTHETIC", "detail": scen}
-        injected = sorted(s.faults) + ([f"attack:{s.attack}"] if s.attack else [])
+                tags[ch] = {"class": "SYNTHETIC", "detail": scen, "live": False}
+        faults = set(s.faults) | ({"ecu_hang"} if self.ecu.failed and self._hang_injected else set())
+        injected = sorted(faults) + ([f"attack:{s.attack}"] if s.attack else [])
         return {"channels": tags, "injected": injected, **self.provenance_static}
 
     def _record(self, now, snap, truth, d, g, rows) -> dict:
         ecu, veh, s = self.ecu, self.vehicle, self.state
-        f = getattr(ecu, "features", None)
+        f = None if ecu.failed else getattr(ecu, "features", None)        # a failed ECU publishes nothing
         card = f.cardiac if f else None
         mot = f.motion if f else None
         imu = snap.imu_window_g
@@ -354,7 +384,8 @@ class DemoEngine:
             },
             "health": {"camera": bool(f and f.camera_ok), "imu": bool(f and f.imu_ok), "seat": bool(f and f.seat_ok)},
             "decision": None,
-            "ecu": {"alive": not ecu.failed, "compute_ms": round(getattr(ecu, "last_compute_ms", 0.0), 2),
+            "ecu": {"alive": not ecu.failed,
+                    "compute_ms": None if ecu.failed else round(getattr(ecu, "last_compute_ms", 0.0), 2),
                     "overruns": ecu.overruns},
             "mrm": {"state": ecu.controller.state.name if not ecu.failed else "ECU_FAILED",
                     "timer_s": round(ecu.controller.mrm_timer, 1), "etiology": ecu.controller.confirmed_etiology},
@@ -370,6 +401,9 @@ class DemoEngine:
         }
         if d is not None:
             llr = {b: {c: round(v.get(c, 0.0), 2) for c in ("Syncope", "Seizure")} for b, v in d.raw.branch_llr.items()}
+            # the class the evidence panel explains: the candidate, else the likelier of the two events
+            shown = d.candidate_class if d.candidate_class != "Normal" else max(
+                ("Seizure", "Syncope"), key=lambda c: d.raw.posteriors.get(c, 0.0))
             rec["decision"] = {
                 "posteriors": {c: round(p, 3) for c, p in d.raw.posteriors.items()},
                 "candidate": d.candidate_class, "confidence": round(d.top_confidence, 3),
@@ -378,7 +412,8 @@ class DemoEngine:
                 "trigger": bool(d.mrm_trigger_flag), "mode": d.mode, "degraded": int(d.degraded_level),
                 "spoof": bool(d.spoofing_detected), "distrust_s": DISTRUST_S,
                 "override_suppressed": bool(d.override_suppressed),
-                "corroborating": list(d.corroborating_sensors), "branch_llr": llr,
+                "corroborating": list(d.corroborating_sensors), "branch_llr": llr, "shown_class": shown,
+                "corroborating_by_class": {c: sorted(d.raw.corroborating_sensors(c)) for c in ("Syncope", "Seizure")},
             }
         return rec
 
@@ -406,10 +441,20 @@ class DemoEngine:
             lines.append(f"[gateway {t - (self.t0 or 0):6.1f}] {msg}")
         self._gw_log_seen = len(gw)
         sec = self.ecu.watchdog.security_log
-        for line in sec[self._sec_log_seen:]:
+        t0 = self.t0 or 0.0
+        for line in sec[self._sec_log_seen:]:           # session time, as on the gateway lines
+            line = re.sub(r"t=(-?[0-9.]+)s", lambda m: f"t={float(m.group(1)) - t0:.1f}s", line, count=1)
             lines.append(f"[watchdog] {line}")
         self._sec_log_seen = len(sec)
+        lines += self._notes
+        self._notes = []
         return lines[-20:]
+
+    def close(self) -> None:
+        """Flush and close the session file, if one is open."""
+        if self._rec is not None:
+            self._rec.close()
+            self._rec = None
 
     def _write(self, rec: dict) -> None:
         if self._rec is None:

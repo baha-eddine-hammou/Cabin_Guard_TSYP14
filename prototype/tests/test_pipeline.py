@@ -121,3 +121,23 @@ def test_eye_aspect_ratio():
 
 def test_class_order():
     assert CLASSES == ("Normal", "Syncope", "Seizure")
+
+
+def test_rppg_tracker_follows_a_drifting_frame_rate():
+    """72 bpm with the webcam dropping from 30 to 15 fps: one beat per pulse, no duplicates."""
+    from cabinguard.vision import RPPGTracker
+    rng = np.random.default_rng(0)
+    pbv = np.array([0.33, 0.77, 0.53])                # blood-volume pulse colour signature (R, G, B)
+    tr, t, beats = RPPGTracker(30.0), 0.0, []
+    while t < 16.0:
+        tr.push(t, np.array([150.0, 110.0, 90.0]) * (1 + 0.01 * pbv * np.sin(2 * np.pi * 1.2 * t))
+                + rng.normal(0, 0.15, 3))
+        beats += tr.new_beats()[0]
+        t += 1 / (30.0 if t < 8.0 else 15.0)
+    ibi = np.diff(beats)
+    assert len(beats) >= 10 and ibi.min() >= 0.33
+    assert abs(60 / np.median(ibi) - 72) < 4
+    slow = RPPGTracker(6.0)
+    for i in range(60):
+        slow.push(i / 6.0, np.array([150.0, 110.0, 90.0]))
+    assert slow.new_beats()[0] == []                  # below 7 Hz the pulse band cannot be resolved

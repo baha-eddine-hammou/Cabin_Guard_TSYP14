@@ -22,6 +22,7 @@ Sensor-node frame (little endian, 24 bytes, 100 Hz):
 """
 from __future__ import annotations
 
+import logging
 import struct
 import threading
 import time
@@ -224,12 +225,12 @@ class CameraFrontEnd:
 
     Frames are stamped with ``clock()`` (``time.perf_counter``): on Windows
     with Python 3.12 ``time.monotonic`` ticks in about 15.6 ms steps, which
-    would quantise the beat times. The rPPG tracker is built with the frame
-    rate measured over the first second, not the nominal one. ``latest_jpeg``
-    holds the last annotated frame (landmarks drawn) for a display.
+    would quantise the beat times. The rPPG tracker resamples the colour trace
+    from its own frame timestamps, so a drifting frame rate does not detune it.
+    ``latest_jpeg`` holds the last annotated frame (landmarks drawn) for a
+    display. An error in one frame is logged and skipped; it never ends the
+    channel.
     """
-
-    MEASURE_FRAMES = 30
 
     def __init__(self, index: int = 0, fps: float = 30.0, model_path: Path | str = FACE_MODEL,
                  annotate: bool = True):
@@ -238,16 +239,16 @@ class CameraFrontEnd:
         self.cap = cv2.VideoCapture(index)
         self.cap.set(cv2.CAP_PROP_FPS, fps)
         self.landmarks = FaceLandmarks(model_path, video=True)
-        self.rppg: RPPGTracker | None = None
-        self.fps_measured: float | None = None
+        self.rppg = RPPGTracker(fps)
         self.state = {"t": None, "face": False, "snr": -20.0, "ear": None, "pitch": None}
         self.beats: list[float] = []
         self.latest_jpeg: bytes | None = None
         self.frames = 0
-        self._stamps: list[float] = []
+        self.errors = 0
         self._lock = threading.Lock()
         self._stop = False
-        threading.Thread(target=self._run, daemon=True).start()
+        self._thread = threading.Thread(target=self._run, daemon=True, name="camera")
+        self._thread.start()
 
     def _read(self):
         ok, frame = self.cap.read()
@@ -262,33 +263,35 @@ class CameraFrontEnd:
         return None
 
     def _run(self):
-        cv2 = self.cv2
         while not self._stop:
             frame = self._read()
             if frame is None:
                 continue
-            t = clock()
-            self.frames += 1
-            if self.rppg is None:
-                self._stamps.append(t)
-                if len(self._stamps) >= self.MEASURE_FRAMES:
-                    self.fps_measured = (len(self._stamps) - 1) / (self._stamps[-1] - self._stamps[0])
-                    self.rppg = RPPGTracker(self.fps_measured)
-            p = self.landmarks(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), t)
-            if p is None:
-                with self._lock:
-                    self.state.update(t=t, face=False)
-                self._keep_jpeg(frame, None, None)
-                continue
-            m = face_measures(frame, p)
-            beats = []
-            if self.rppg is not None and m["rgb"] is not None:
-                self.rppg.push(t, m["rgb"])
-                beats, _ = self.rppg.new_beats()
-            with self._lock:
-                self.state.update(t=t, face=True, snr=m["snr"], ear=m["ear"], pitch=m["pitch"])
-                self.beats += beats
-            self._keep_jpeg(frame, p, m["box"])
+            try:
+                self._process(frame, clock())
+            except Exception:                     # one bad frame must not end the live channel
+                self.errors += 1
+                if self.errors in (1, 10, 100):
+                    logging.getLogger("cabinguard.camera").exception("frame %d failed", self.frames)
+
+    def _process(self, frame, t: float) -> None:
+        cv2 = self.cv2
+        self.frames += 1
+        p = self.landmarks(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), t)
+        if p is None:
+            with self._lock:                      # no face: no eye or head values either
+                self.state.update(t=t, face=False, ear=None, pitch=None)
+            self._keep_jpeg(frame, None, None)
+            return
+        m = face_measures(frame, p)
+        beats = []
+        if m["rgb"] is not None:
+            self.rppg.push(t, m["rgb"])
+            beats, _ = self.rppg.new_beats()
+        with self._lock:
+            self.state.update(t=t, face=True, snr=m["snr"], ear=m["ear"], pitch=m["pitch"])
+            self.beats += beats
+        self._keep_jpeg(frame, p, m["box"])
 
     def _keep_jpeg(self, frame, p, box) -> None:
         if not self.annotate or self.frames % 3:
@@ -315,7 +318,7 @@ class CameraFrontEnd:
 
     def close(self) -> None:
         self._stop = True
-        time.sleep(0.1)
+        self._thread.join(timeout=2.0)            # never release the device under a running frame
         self.cap.release()
         self.landmarks.close()
 

@@ -78,26 +78,48 @@ def head_pitch_deg(forehead: np.ndarray, nose: np.ndarray, chin: np.ndarray) -> 
 
 
 class RPPGTracker:
-    """Streaming rPPG: push face-ROI colour means, read new beat times."""
+    """Streaming rPPG: push face-ROI colour means, read new beat times.
 
-    def __init__(self, fs: float, buffer_s: float = 10.0):
-        self.fs = fs
-        self.buf: deque = deque(maxlen=int(buffer_s * fs))
-        self.times: deque = deque(maxlen=int(buffer_s * fs))
+    A webcam's frame rate drifts (auto-exposure in low light can halve it), so
+    the trace is resampled onto a uniform grid at ``fs`` from its own
+    timestamps on every call, instead of trusting a rate measured once. Below
+    ``MIN_FRAME_RATE_HZ`` the pulse band cannot be resolved and no beats are
+    reported.
+    """
+
+    MIN_FRAME_RATE_HZ = 2.0 * PULSE_BAND_HZ[1]
+    EDGE_S = 0.5
+
+    def __init__(self, fs: float = 30.0, buffer_s: float = 10.0):
+        self.fs = max(float(fs), 2.5 * PULSE_BAND_HZ[1])     # processing rate of the resampled trace
+        self.buffer_s = buffer_s
+        self.buf: deque = deque()
+        self.times: deque = deque()
         self._last_beat = -np.inf
 
     def push(self, t: float, rgb_mean: np.ndarray) -> None:
         self.buf.append(np.asarray(rgb_mean, float))
         self.times.append(t)
+        while self.times and t - self.times[0] > self.buffer_s:
+            self.times.popleft()
+            self.buf.popleft()
 
     def new_beats(self) -> tuple[list[float], float]:
         """Beat times not reported before, plus the current pulse SNR in dB."""
-        if len(self.buf) < 3 * self.fs:
-            return [], -np.inf
-        pulse = pos_pulse(np.array(self.buf), self.fs)
-        peaks = pulse_peaks(pulse, self.fs)
         t = np.array(self.times)
-        beats = [float(t[i]) for i in peaks if t[i] > self._last_beat and i < len(t) - 2]
-        if beats:
-            self._last_beat = beats[-1]
+        if len(t) < 2 or t[-1] - t[0] < 3.0:
+            return [], -np.inf
+        if (len(t) - 1) / (t[-1] - t[0]) <= self.MIN_FRAME_RATE_HZ:
+            return [], -np.inf
+        # grid points on absolute multiples of 1/fs, so a peak keeps the same time from call to call
+        grid = np.arange(np.ceil(t[0] * self.fs), np.floor(t[-1] * self.fs) + 1) / self.fs
+        x = np.array(self.buf)
+        rgb = np.column_stack([np.interp(grid, t, x[:, k]) for k in range(3)])
+        pulse = pos_pulse(rgb, self.fs)
+        beats = []
+        for i in pulse_peaks(pulse, self.fs):
+            # skip the filter's edge (the newest peaks still move) and anything within 0.33 s of the last beat
+            if grid[i] < t[-1] - self.EDGE_S and grid[i] > self._last_beat + 0.33:
+                beats.append(float(grid[i]))
+                self._last_beat = beats[-1]
         return beats, pulse_snr_db(pulse, self.fs)

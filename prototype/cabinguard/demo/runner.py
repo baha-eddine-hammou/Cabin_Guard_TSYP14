@@ -49,6 +49,7 @@ class DemoRunner:
     def stop(self) -> None:
         self._stop.set()
         self._thread.join(timeout=2)
+        self.engine.close()
 
     def submit(self, name: str, arg: str | None = None) -> None:
         if name == "script":
@@ -87,10 +88,12 @@ class DemoRunner:
             rec["script_running"] = self._script_t0 is not None
             if rec["k"] == 1:              # engine was reset: timing restarts with it
                 self.compute_ms.clear()
-            self.compute_ms.append(rec["ecu"]["compute_ms"])
-            del self.compute_ms[:-3000]
+            if rec["ecu"]["compute_ms"] is not None:          # None while the ECU is failed silent
+                self.compute_ms.append(rec["ecu"]["compute_ms"])
+                del self.compute_ms[:-3000]
+            xs = sorted(self.compute_ms)
             rec["timing"] = {"loop_ms": round((time.perf_counter() - now) * 1000, 2),
-                             "compute_p99_ms": round(sorted(self.compute_ms)[int(0.99 * (len(self.compute_ms) - 1))], 2)}
+                             "compute_p99_ms": round(xs[int(0.99 * (len(xs) - 1))], 2) if xs else None}
             self.latest = rec
             delay = t0 + k * config.FUSION_DT - time.perf_counter()
             if delay > 0:

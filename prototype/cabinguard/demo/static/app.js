@@ -10,8 +10,9 @@ const BRANCHES = [["cardiac", "Pulse rhythm", "camera"], ["vision", "Eyes, head"
 // [record field, title, decimals, fixed axis range]: fixed ranges so an event looks like an event, not rescaled noise
 const STRIPS = [["ear", "Eyes (EAR)", 2, [0, 0.4]], ["hr_bpm", "Pulse, bpm", 0, [30, 150]],
                 ["imu_rms_g", "Headrest, g", 3, [0, 0.25]], ["psi", "Seat slump \u03C8", 2, [0, 1]],
-                ["torque_nm", "Torque, Nm", 1, [0, 5]]];
+                ["torque_nm", "Torque, Nm", 1, [-5, 5]]];          // signed: the ESP32 reports both directions
 const HISTORY = 600;                       // 60 s at 10 Hz
+const LOG_KEEP_S = 10;                     // watchdog and demo notes stay this long (the camera distrust time)
 const hist = Object.fromEntries(STRIPS.map(([k]) => [k, []]));
 let rejects = [];
 let logs = [];
@@ -21,7 +22,7 @@ let sock = null;
 // ------------------------------------------------------------------ socket ---
 function connect() {
   sock = new WebSocket(`ws://${location.host}/ws`);
-  sock.onopen = () => { $("conn").textContent = "live"; };
+  sock.onopen = () => { $("conn").textContent = "live"; camShown = null; };   // re-request the video after a restart
   sock.onclose = () => { $("conn").textContent = "reconnecting"; setTimeout(connect, 800); };
   sock.onmessage = (m) => render(JSON.parse(m.data));
 }
@@ -33,8 +34,9 @@ const KEYS = { s: ["event", "seizure"], y: ["event", "syncope"], f: ["attack", "
   t: ["attack", "tamper"], i: ["attack", "implausible"], b: ["fault", "blind"], u: ["fault", "imu_drop"],
   h: ["fault", "ecu_hang"], c: ["fault", "cellular_down"], p: ["script", "seizure"] };
 document.addEventListener("keydown", (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;     // Ctrl+R reloads the page, it is not a replay
   if (e.key === "Escape") return send("reset");
-  if (e.key === "l") { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "light" ? "dark" : "light"; return; }
+  if (e.key.toLowerCase() === "l") { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "light" ? "dark" : "light"; return; }
   const k = KEYS[e.key.toLowerCase()];
   if (k) send(...k);
 });
@@ -53,7 +55,9 @@ function render(r) {
   renderCan(r);
   renderEcall(r);
   const tm = r.timing || {};
-  $("timing").textContent = `ECU ${r.ecu.compute_ms.toFixed(1)} ms (p99 ${tm.compute_p99_ms ?? "-"}) of 100 ms`;
+  $("timing").textContent = r.ecu.compute_ms == null
+    ? "ECU silent (simulated deadline overrun)"
+    : `ECU ${r.ecu.compute_ms.toFixed(1)} ms (p99 ${tm.compute_p99_ms ?? "-"}) of 100 ms`;
   document.querySelectorAll("button.toggle").forEach((b) =>
     b.classList.toggle("on", r.provenance.injected.includes(b.dataset.arg)));
 }
@@ -61,17 +65,20 @@ function render(r) {
 function chip(label, cls, detail) {
   return `<span class="chip ${cls.toLowerCase()}" title="${detail}"><b>${label}</b>${cls}${detail ? ": " + detail : ""}</span>`;
 }
+const CHANNEL_FAULTS = ["blind", "imu_drop", "seat_freeze"];     // shown on the channel chips they overwrite
 function renderChips(p) {
   const names = { pulse: "Pulse", face: "Face", imu: "Headrest IMU", seat: "Seat+wheel" };
-  let h = Object.entries(p.channels).map(([ch, v]) => chip(names[ch], v.class, v.class === "LIVE" ? v.detail : "")).join("");
-  h += p.injected.map((x) => chip("Injected", "INJECTED", x)).join("");
-  h += chip("Key", p.key === "DEMO KEY" ? "SYNTHETIC" : "LIVE", p.key);
+  let h = Object.entries(p.channels).map(([ch, v]) => chip(names[ch], v.class, v.class === "SYNTHETIC" ? "" : v.detail)).join("");
+  h += p.injected.filter((x) => !CHANNEL_FAULTS.includes(x)).map((x) => chip("Injected", "INJECTED", x)).join("");
+  h += `<span class="chip key"><b>Key</b>${p.key}</span>`;          // a key is not an evidence class
   $("chips").innerHTML = h;
   $("vehTag").textContent = p.vehicle;
   $("busTag").textContent = `${p.bus}, SecOC profile 1 (24-bit AES-CMAC, 8-bit freshness)`;
   $("commsTag").textContent = p.comms;
   const synth = Object.values(p.channels).every((v) => v.class === "SYNTHETIC");
   $("cabinTag").textContent = synth ? "SYNTHETIC signals" : "mixed: see chips";
+  $("evTag").textContent = synth ? "SYNTHETIC inputs: not detection performance"
+                                 : "mixed inputs (see chips): not detection performance";
 }
 
 function renderStepper(r) {
@@ -91,14 +98,14 @@ function renderRoad(r) {
   const v = r.vehicle, blink = Math.floor(performance.now() / 333) % 2 === 0;
   const xLane = (m) => X0 + m * PX;               // lateral metres to the right of the lane centre
   const left = xLane(-LANE / 2), mid1 = xLane(LANE / 2), mid2 = xLane(1.5 * LANE), right = xLane(2.5 * LANE);
-  const dash = (v.distance_m * PX) % 60;
+  const dash = (v.distance_m * PX) % 234;          // period above twice the 10 Hz step at 100 km/h: no backward aliasing
   const carX = xLane(-v.lateral_m), carY = 250, w = 1.9 * PX, l = 4.6 * PX;
   const brake = v.decel < -0.3 || v.epb;
   const haz = v.hazards && blink;
   let s = `<rect x="0" y="0" width="560" height="430" fill="var(--surface-2)"/>`;
   s += `<rect x="${left}" y="0" width="${right - left}" height="430" fill="var(--road)"/>`;
   s += `<line x1="${left}" y1="0" x2="${left}" y2="430" stroke="var(--paint)" stroke-width="3"/>`;
-  s += `<line x1="${mid1}" y1="0" x2="${mid1}" y2="430" stroke="var(--paint)" stroke-width="2" stroke-dasharray="30 30" stroke-dashoffset="${-dash}"/>`;
+  s += `<line x1="${mid1}" y1="0" x2="${mid1}" y2="430" stroke="var(--paint)" stroke-width="2" stroke-dasharray="78 156" stroke-dashoffset="${-dash}"/>`;
   s += `<line x1="${mid2}" y1="0" x2="${mid2}" y2="430" stroke="var(--paint)" stroke-width="3"/>`;
   s += `<line x1="${right}" y1="0" x2="${right}" y2="430" stroke="var(--paint)" stroke-width="2"/>`;
   s += `<text x="${(left + mid1) / 2}" y="420" text-anchor="middle" fill="var(--paint)" font-size="12">lane</text>`;
@@ -110,7 +117,7 @@ function renderRoad(r) {
       const rr = 30 + ((ph + k) % 1) * 140;
       s += `<circle cx="${carX}" cy="${carY}" r="${rr}" fill="none" stroke="var(--text-2)" stroke-opacity="${1 - ((ph + k) % 1)}" stroke-width="2"/>`;
     }
-    s += `<text x="${carX}" y="${carY - 95}" text-anchor="middle" fill="var(--text)" font-size="12" paint-order="stroke" stroke="var(--surface)" stroke-width="4">DENM (simulated radio): cause 93, sub-cause 0</text>`;
+    s += `<text x="${carX}" y="${carY + 112}" text-anchor="middle" fill="var(--text)" font-size="12" paint-order="stroke" stroke="var(--surface)" stroke-width="4">DENM (simulated radio): cause 93, sub-cause 0</text>`;
   }
   s += `<g transform="translate(${carX - w / 2},${carY - l / 2})">`;
   s += `<rect width="${w}" height="${l}" rx="9" fill="var(--normal)" stroke="var(--text)" stroke-width="1.5"/>`;
@@ -137,17 +144,18 @@ function renderRoad(r) {
 }
 
 // Cabin: live webcam when the face channel is live, otherwise a schematic driven by the signals.
-let camShown = false;
+let camShown = null;
 function renderCabin(r) {
-  const face = r.provenance.channels.face, live = face.class === "LIVE";
+  const face = r.provenance.channels.face, live = !!face.live;      // the webcam view stays while a fault overlays it
   if (live !== camShown) {
     $("cam").hidden = !live; $("driver").style.display = live ? "none" : "";
     if (live) $("cam").src = "/video.mjpg?" + Date.now();
     camShown = live;
   }
-  $("cabinCaption").textContent = live
-    ? "LIVE webcam with landmarks; nothing is stored. Signals below follow each channel's chip."
-    : "Schematic driver drawn from SYNTHETIC scenario signals: not a camera image.";
+  const rec = r.provenance.recording ? " Derived signals and decisions are being recorded to data/demo_sessions." : "";
+  $("cabinCaption").textContent = (live
+    ? "LIVE webcam with landmarks; video frames are never stored. Signals below follow each channel's chip."
+    : "Schematic driver drawn from the signals below, not a camera image.") + rec;
   if (!live) drawDriver(r.inputs);
   STRIPS.forEach(([k]) => { hist[k].push(r.inputs[k]); if (hist[k].length > HISTORY) hist[k].shift(); });
   if (!$("strips").children.length) {
@@ -224,7 +232,7 @@ function renderDecision(r) {
   $("persistLabel").textContent = d.candidate === "Normal"
     ? "No event candidate"
     : `${d.candidate} held for ${d.persistence_s.toFixed(1)} of ${d.persistence_needed_s} s` + (d.trigger ? ": confirmed" : "");
-  const cls = d.candidate === "Normal" ? (d.posteriors.Seizure > d.posteriors.Syncope ? "Seizure" : "Syncope") : d.candidate;
+  const cls = d.shown_class;
   $("llr").innerHTML = BRANCHES.map(([b, name, sensor]) => {
     const l = d.branch_llr[b] ? d.branch_llr[b][cls] : null;
     if (l == null) return `<div class="llr-row"><span>${name} <span class="muted">${sensor}</span></span><div class="llr-track"><div class="llr-zero"></div></div><span class="bar-val muted">off</span></div>`;
@@ -233,15 +241,16 @@ function renderDecision(r) {
       <div class="llr-fill" style="left:${lpc}%;width:${wpc}%;background:var(${CLASS_VAR[cls]})"></div><div class="llr-zero"></div></div>
       <span class="bar-val">${l >= 0 ? "+" : ""}${l.toFixed(1)}</span></div>`;
   }).join("") + `<div class="muted llr-note" style="font-size:12px">bars show evidence for ${cls}; right = for, left = against</div>`;
-  const sensors = d.corroborating.length;
-  $("corro").innerHTML = `Physical sensors agreeing on ${cls}: <span class="ok">${sensors ? d.corroborating.join(", ") : "none"}</span> (${sensors} of 3; a manoeuvre needs 2)`;
+  const agree = d.corroborating_by_class[cls] || [];
+  $("corro").innerHTML = `Physical sensors agreeing on ${cls}: <span class="ok">${agree.length ? agree.join(", ") : "none"}</span> (${agree.length} of 3; a manoeuvre needs 2)`;
   let al = "";
   if (d.spoof) al += `<div class="alert">Spoofing interlock: camera says unconscious, seat and wheel show an active driver. Camera distrusted for ${d.distrust_s} s.</div>`;
   if (d.override_suppressed) al += `<div class="alert info">Steering torque coincides with clonic motion: it cannot cancel the alert.</div>`;
   if (d.degraded > 0) al += `<div class="alert">${d.mode}</div>`;
-  // gateway lines are already itemised in the CAN panel; here only the watchdog speaks
-  logs = logs.concat((r.log || []).filter((x) => x.startsWith("[watchdog]"))).slice(-3);
-  logs.forEach((x) => (al += `<div class="alert info">${x}</div>`));
+  // gateway lines are already itemised in the CAN panel; here only the watchdog and the demo notes speak
+  logs = logs.concat((r.log || []).filter((x) => !x.startsWith("[gateway")).map((x) => [r.t, x]))
+             .filter(([t]) => r.t - t < LOG_KEEP_S).slice(-3);
+  logs.forEach(([, x]) => (al += `<div class="alert info">${x}</div>`));
   $("alerts").innerHTML = al;
 }
 
@@ -249,14 +258,20 @@ const WHY = {
   forge: "attacker without the key: MAC does not verify",
   replay: "frame captured 3 s ago: the freshness counter moved on, so its MAC no longer verifies",
   tamper: "copied frame with modified bits: MAC does not verify",
-  implausible: "valid MAC (compromised ECU) but phase 0 to 3 at -4 m/s²: plausibility gate",
+  implausible: "valid MAC (compromised ECU) but -6 m/s² exceeds the gateway's -4 m/s² limit: plausibility gate",
 };
+const NOT_REJECTED = ["OK", "-", "IGNORED"];     // IGNORED: 0x122 status frames, which the gateway does not act on
 function renderCan(r) {
   const cmd = [...r.can].reverse().find((x) => x.id === "0x120" && x.verdict === "OK");
-  if (cmd) $("latestCmd").innerHTML = `<b>0x120 MRM_Cmd</b> &nbsp; ${cmd.signals}<br>freshness ${cmd.fv} &nbsp; MAC ${cmd.mac} &nbsp; <span class="v-ok">✓ OK</span> &nbsp; <span class="muted">(+0x121 health every 100 ms, 0x122 telematics every 1 s)</span>`;
+  if (!r.ecu.alive) {
+    $("latestCmd").innerHTML = `<b>No 0x120 from the ECU</b>: the gateway's alive supervision has taken over`;
+  } else if (cmd) {
+    $("latestCmd").innerHTML = `<b>0x120 MRM_Cmd</b> from ${cmd.sender} &nbsp; ${cmd.signals}<br>freshness ${cmd.fv} &nbsp; MAC ${cmd.mac} &nbsp; <span class="v-ok">✓ OK</span> &nbsp; <span class="muted">(+0x121 health every 100 ms, authenticated; 0x122 telematics status every 1 s, not authenticated)</span>`;
+  }
   const attack = (r.provenance.injected.find((x) => x.startsWith("attack:")) || "").slice(7);
-  r.can.filter((x) => !["OK", "-", "status (not authenticated)"].includes(x.verdict)).forEach((x) => {
-    rejects.unshift({ ...x, why: WHY[attack] || "" });
+  r.can.filter((x) => !NOT_REJECTED.includes(x.verdict)).forEach((x) => {
+    // the attack's explanation belongs to the attacker's frames only, never to a genuine ECU frame
+    rejects.unshift({ ...x, why: x.sender !== "ECU" ? (WHY[attack] || "") : "" });
   });
   rejects = rejects.slice(0, 40);
   const c = r.counters;

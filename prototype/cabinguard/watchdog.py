@@ -71,7 +71,7 @@ class CrossSensorWatchdog:
         camera_says_down = ((f.cardiac is not None and f.cardiac.pulse_absent >= SPOOF_PULSE_ABSENT)
                             or (f.fusion.ear is not None and f.fusion.ear <= SPOOF_EAR_CLOSED
                                 and f.fusion.pitch_deg is not None and f.fusion.pitch_deg > -10))
-        seat_says_driving = (f.grip == "ACTIVE" and f.steering_torque_nm > config.SPOOF_HR_MIN_TORQUE_NM
+        seat_says_driving = (f.grip == "ACTIVE" and abs(f.steering_torque_nm) > config.SPOOF_HR_MIN_TORQUE_NM
                              and f.fusion.psi is not None and f.fusion.psi < UPRIGHT_PSI)
         return camera_says_down and seat_says_driving
 
@@ -135,6 +135,6 @@ class CrossSensorWatchdog:
         # An involuntary clonic jerk or a clenched grip must not count as the
         # driver taking the wheel back.
         seizure_motion = "motion" in smoothed and smoothed["motion"][0, CLASSES.index("Seizure")] >= 1.0
-        suppress = f.steering_torque_nm > config.DRIVER_OVERRIDE_TORQUE_NM and (seizure_motion or f.grip == "CLENCHED")
+        suppress = abs(f.steering_torque_nm) > config.DRIVER_OVERRIDE_TORQUE_NM and (seizure_motion or f.grip == "CLENCHED")
         return WatchdogDecision(MODES[level], level, active, trigger, spoof, suppress, self.t_persist,
                                 self.candidate, conf, result.shannon_entropy, corroborating, result)

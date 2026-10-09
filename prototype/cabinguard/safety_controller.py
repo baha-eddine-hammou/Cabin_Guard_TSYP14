@@ -76,7 +76,8 @@ class VehicleSafetyController:
 
             # Driver Manual Override Check: torque > 4.0 Nm or brake pedal cancels MRM
             # Involuntary seizure spasms (override_suppressed=True) cannot cancel MRM via steering torque
-            manual_override = (steering_torque > config.DRIVER_OVERRIDE_TORQUE_NM and not override_suppressed) or brake_pressed
+            # magnitude: a driver can steer either way (the ESP32 node reports signed torque)
+            manual_override = (abs(steering_torque) > config.DRIVER_OVERRIDE_TORQUE_NM and not override_suppressed) or brake_pressed
             if manual_override:
                 self.state = MRMState.NORMAL
                 self.mrm_timer = 0.0

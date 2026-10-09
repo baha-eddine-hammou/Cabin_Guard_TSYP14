@@ -50,6 +50,7 @@ body {
 .chip.synthetic::before { content: "\25CC "; }
 .chip.injected { border-color: var(--critical); color: var(--text); }
 .chip.injected::before { content: "\26A1 "; }
+.chip.key { border-style: dashed; }
 .clock { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
 .conn { font-size: 12px; color: var(--muted); }
 
@@ -158,7 +159,10 @@ button.danger { border-color: var(--critical); }
   .bar-track { height: 14px; }
   .llr-row { margin: 1px 0; font-size: 12px; grid-template-columns: 150px 1fr 40px; }
   .llr-track { height: 11px; }
-  .llr-note { display: none; }
+  .llr-note, .brand .sub, #ecall .hex { display: none; }
+  .chip { font-size: 12px; padding: 1px 8px; }
+  .alerts { max-height: 7em; overflow: auto; }
+  .decision, .psap { overflow: auto; }
   .caption { margin: 2px 0; }
   .alert, .corro { font-size: 12px; }
   .hud .speed { font-size: 34px; }
