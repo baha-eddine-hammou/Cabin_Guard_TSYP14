@@ -53,7 +53,12 @@ class VehicleGateway:
         self.last_valid_t: float | None = None
         self.first_tick_t: float | None = None
         self.rejected_implausible = 0
-        self.verdicts: deque = deque(maxlen=400)     # (t, arb_id, verdict)
+        self.verdicts: deque = deque(maxlen=400)     # (t, arb_id, verdict), most recent only
+        self.n_verdicts = 0                          # total ever recorded, to find new ones after the cap
+
+    def _verdict(self, entry: tuple) -> None:
+        self.verdicts.append(entry)
+        self.n_verdicts += 1
 
     def _plausible(self, cmd: MRMCommand, driver_override: bool) -> bool:
         if not DECEL_LIMIT_MSS <= cmd.decel_mss <= 0.0:
@@ -75,22 +80,22 @@ class VehicleGateway:
                 self.health = h
             else:
                 self.state.log.append((t, "rejected 0x121: authentication or freshness"))
-            self.verdicts.append((t, arb_id, self.health_rx.secoc.last_reason))
+            self._verdict((t, arb_id, self.health_rx.secoc.last_reason))
             return h is not None
         if arb_id != MRM_CMD_ID:
-            self.verdicts.append((t, arb_id, "IGNORED"))
+            self._verdict((t, arb_id, "IGNORED"))
             return False
         cmd = self.rx.accept(arb_id, data)
         if cmd is None:
             self.state.log.append((t, "rejected: authentication or freshness"))
-            self.verdicts.append((t, arb_id, self.rx.secoc.last_reason))
+            self._verdict((t, arb_id, self.rx.secoc.last_reason))
             return False
         if not self._plausible(cmd, driver_override):
             self.rejected_implausible += 1
             self.state.log.append((t, f"rejected: implausible command {cmd}"))
-            self.verdicts.append((t, arb_id, "IMPLAUSIBLE"))
+            self._verdict((t, arb_id, "IMPLAUSIBLE"))
             return False
-        self.verdicts.append((t, arb_id, "OK"))
+        self._verdict((t, arb_id, "OK"))
         self.last_valid_t = t
         s = self.state
         s.phase, s.decel_mss, s.hazards, s.epb = cmd.phase, cmd.decel_mss, cmd.hazards, cmd.epb

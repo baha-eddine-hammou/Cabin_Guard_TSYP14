@@ -21,11 +21,17 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-hardware = ["python-can>=4.3", "cantools>=39.0", "pyserial>=3.5", "opencv-python>=4.8", "mediapipe>=0.10"]
-dev = ["pytest>=8.0", "python-can>=4.3", "cantools>=39.0"]
+# mediapipe 0.10.30+ (Tasks FaceLandmarker; numpy 2). It depends on opencv-contrib-python: never add opencv-python too.
+hardware = ["python-can>=4.3", "cantools>=39.0", "pyserial>=3.5", "mediapipe>=0.10.30", "opencv-contrib-python>=4.8"]
+# jury demo: local web dashboard
+demo = ["fastapi>=0.110", "uvicorn>=0.29", "websockets>=12"]
+dev = ["pytest>=8.0", "python-can>=4.3", "cantools>=39.0", "httpx>=0.27"]
 
-[tool.setuptools]
-packages = ["cabinguard"]
+[tool.setuptools.packages.find]
+include = ["cabinguard*"]
+
+[tool.setuptools.package-data]
+"cabinguard.demo" = ["static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

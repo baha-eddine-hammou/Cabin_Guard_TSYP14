@@ -1,5 +1,54 @@
 # CabinGuard-ADI jury demo: recommended plan
 
+## 0. As built, after the team's answers
+
+The answers to Section 9 changed the plan. This section records what was built
+and what follows from the answers; the sections after it are the original plan,
+kept for the reasoning and the corrections.
+
+| Question | Answer | Consequence |
+|---|---|---|
+| GPU | 4 GB VRAM laptop | No CARLA (its minimum is 6 GB). The built-in top-view road is the vehicle view. Heavy GPU work is deferred |
+| MATLAB | R2025, all toolboxes | MATLAB is an offline independent checker of recorded sessions, never in the control path (Section 4.1). With a supported USB-CAN adapter it can also read the physical bus through Vehicle Network Toolbox |
+| CAN hardware | none yet, can buy | Buy two adapters that both python-can and MATLAB Vehicle Network Toolbox support, for example PEAK PCAN-USB. CANable and candleLight (`gs_usb`, `slcan`) work with python-can but not with Vehicle Network Toolbox |
+| Sensors | ESP32, laptop webcam, USB webcam | `--camera 0` or `--camera 1` for the face channel; `--serial COMx` for the ESP32 node |
+| Lateral manoeuvre | stop on the hard shoulder | Option B is built: `Shoulder_Req` on bit 31 of 0x120, gateway plausibility (shoulder only from phase 3), kinematic lateral model to -7 m (one lane plus the shoulder) |
+| Jury format | 4-minute talk with a 2-minute demo | The 2-minute storyline below replaces Section 6 for the jury; Section 6 stays as the Q&A menu |
+| Team and time | 5 people, 7 weeks | Work split below |
+
+**What was built (MVP).**
+
+- `prototype/run_jury_demo.py` starts the engine, the pacing thread and a local web server on 127.0.0.1:8765, and opens the browser.
+- `cabinguard/demo/engine.py` runs `CabinGuardECU` and `VehicleSide` unchanged at 10 Hz, mixes simulator and live channels, applies operator faults and attacks, pairs every CAN frame with the gateway's verdict, and builds one record per cycle with computed evidence chips.
+- `cabinguard/demo/runner.py` paces cycles on `time.perf_counter` and plays the scripted run with presenter cues.
+- `cabinguard/demo/server.py` and `static/` are the dashboard: FastAPI, one WebSocket and plain HTML, CSS and JavaScript, with no framework and nothing loaded from the internet. NiceGUI (M3) was not needed.
+- The camera path uses the MediaPipe Tasks FaceLandmarker with the model file shipped in `prototype/models/`.
+- Not built yet: the DATASET REPLAY tier (I3, needs the Colab run), the physical CAN bench (O2), the MATLAB checker (O3) and the ESP32 hardening (I2).
+
+**The 2-minute demo** (times from pressing P; measured on the in-process run).
+
+| Time | What happens | What the presenter says |
+|---|---|---|
+| 0:00 | Reset; car at 100 km/h; all chips SYNTHETIC | "Every panel says where its data comes from. This is synthetic: it exercises the software, it is not detection performance." |
+| 0:06-0:08 | Forged brake commands from an attacker without the key | "Every forged frame fails its MAC check; the car never reacts." |
+| 0:14 | Seizure scenario starts (onset 1 s later) | "Watch the evidence per sensor build." |
+| about 0:26 | Phase 1: two physical sensors agree, chime, cancel window | "Two independent physical sensors must agree before anything happens." |
+| about 0:29 | Phase 2: hazards, sealed eCall acknowledged | "The emergency centre receives 137 bytes: encrypted, signed, no identity." |
+| about 0:36 | Phase 3: braking at 3.2 m/s² and steering to the shoulder; DENM | "Nearby cars learn there is a human problem, never the diagnosis." |
+| about 0:45 | Phase 4: standstill on the shoulder, parking brake, doors unlocked | |
+| 0:45-1:45 | Esc, then live faults: Blind camera (spoofing interlock, no manoeuvre), Compromised ECU (valid MAC, rejected as implausible), ECU hang (warning only in normal driving) | One sentence each |
+| 1:45-2:00 | Close | "Phase 2 is the same command with `--camera` and `--serial`." |
+
+**Work split for 5 people over 7 weeks.**
+
+| Who | Weeks | Work | Done when |
+|---|---|---|---|
+| Demo owner | 1-7 | Install on the jury laptop (python.org CPython 3.12, `pip install -e "prototype[demo,hardware]"`), run the scripted demo daily, own the operator card and the Esc fallback | Three cold-boot rehearsals in a row with no restart |
+| ESP32 | 1-4 | Section 5 stage 1: port found by USB VID/PID, reconnect on unplug, clear the IMU window on an I2C error, brake foot switch; headrest IMU, seat FSR and grip pads on a chair | `--serial` turns the IMU and seat chips LIVE and `tests/test_hardware.py` passes |
+| MATLAB | 2-5 | Read `--record` session files; recompute every 0x120 MAC with an independent AES-CMAC checked against RFC 4493 vectors; plot the session timeline | Zero disagreements with the gateway's verdicts on a recorded run |
+| CAN bench | 3-6 | Buy two adapters; run `run_realtime.py` and `run_gateway.py` on a physical 500 kbit/s bus with 120 Ω at both ends; read it in MATLAB Vehicle Network Toolbox | The forged-frame attack is rejected on the wire |
+| Talk and paper | 1-7 | The 4-minute talk; re-run the fault matrix in Colab (the shoulder stop and the 0x121 frame changed its behaviour); the Phase 2 paper; a screen recording of a full rehearsal as the last fallback | Talk timed at 4:00 with the 2-minute demo inside |
+
 This plan merges the four proposals, keeps what each judge rated highest, and corrects every factual error the judges found. A final critic pass found further errors; those checked against the code and PyPI are folded into the text, and Appendix B lists all of them. Appendix A lists the earlier corrections with their evidence.
 
 - **Base design.** It starts from Proposal 4 (the "bench-continuous" demo), which had the highest average judge score (8.2/10). It is the only proposal that handles evidence classes and replay of public-dataset recordings honestly.

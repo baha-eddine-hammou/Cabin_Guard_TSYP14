@@ -42,6 +42,7 @@ prototype/
   run_demo.py            scenarios through the full pipeline
   run_realtime.py        10 Hz real-time ECU loop (simulated or hardware sensors, CAN)
   run_gateway.py         actuator-side gateway for the CAN bench
+  run_jury_demo.py       jury dashboard (cabinguard/demo: engine, runner, web server, static page)
   cabinguard_mrm.dbc     CAN database, bit-exact with cabinguard/can_messages.py
 hardware/                ESP32 sensor-node firmware, BOM, wiring, Phase 2 plan
 tools/check_manuscript.py   manuscript style checker (rules in CLAUDE.md)
@@ -62,6 +63,36 @@ python run_demo.py --scenario normal --attack forge
 python run_realtime.py --scenario syncope --can virtual
 python experiments/fault_matrix.py --seeds 10
 ```
+
+## Jury demo
+
+A local dashboard that runs the same ECU, gateway, SecOC, eCall and DENM code
+at 10 Hz on wall clock, with every input switchable between the scenario
+simulator and live hardware. It needs no GPU and no internet, and binds to
+127.0.0.1 only.
+
+```
+pip install -e "prototype[demo]"                    # add ,hardware for the webcam and the ESP32
+cd prototype
+python run_jury_demo.py                             # all synthetic; opens http://127.0.0.1:8765
+python run_jury_demo.py --camera 0                  # live face channel from the laptop webcam
+python run_jury_demo.py --camera 1 --serial COM5    # USB webcam and the ESP32 sensor node
+python run_jury_demo.py --record                    # also writes every cycle to data/demo_sessions/*.jsonl
+```
+
+Keys in the browser: P plays the scripted run (forged frame at 6 s, seizure
+at 14 s, stop on the hard shoulder about 45 s after play), S seizure, Y
+syncope, F/R/T/I CAN attacks (forge, replay, tamper, compromised ECU),
+B/U/H/C faults (blinded camera, IMU unplugged, ECU hang, cellular down), Esc
+reset, L light or dark theme.
+
+Every input carries a chip the engine computes: SYNTHETIC (simulator signals,
+which exercise the software and are not detection performance), LIVE (a device
+now) or INJECTED (an operator fault or attack). The vehicle is a point mass
+with a kinematic lateral model on an in-process bus, and the bearers and the
+emergency centre are simulated; the dashboard says so on each panel. The
+recorded session file holds the derived signals and decisions, never camera
+frames.
 
 ## Reproduce the real-data results
 

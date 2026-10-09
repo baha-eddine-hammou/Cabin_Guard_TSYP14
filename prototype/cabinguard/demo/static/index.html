@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CabinGuard-ADI live demo</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">CabinGuard-ADI <span class="sub">live demo</span></div>
+  <div class="chips" id="chips"></div>
+  <div class="clock"><span id="clock">0.0 s</span><span id="conn" class="conn">connecting</span></div>
+</header>
+
+<section class="stepper" id="stepper" aria-label="Minimum-risk manoeuvre phase">
+  <div class="step" data-phase="NORMAL"><b>Normal</b><span>monitoring</span></div>
+  <div class="step" data-phase="PHASE_1_PRE_ALERT"><b>1 Alert</b><span>3 s, driver can cancel</span></div>
+  <div class="step" data-phase="PHASE_2_ESCALATION"><b>2 Takeover</b><span>hazards, eCall</span></div>
+  <div class="step" data-phase="PHASE_3_ACTIVE_MRM"><b>3 Manoeuvre</b><span>&minus;3.2 m/s&sup2;, to shoulder</span></div>
+  <div class="step" data-phase="PHASE_4_STANDSTILL"><b>4 Standstill</b><span>parking brake, doors</span></div>
+  <div class="mrm-info" id="mrmInfo"></div>
+</section>
+
+<main class="grid">
+  <section class="panel road">
+    <h2>Vehicle <span class="tag" id="vehTag"></span></h2>
+    <svg id="road" viewBox="0 0 560 430" role="img" aria-label="Top view of the highway and the ego vehicle"></svg>
+    <div class="hud" id="hud"></div>
+  </section>
+
+  <section class="panel cabin">
+    <h2>Cabin <span class="tag" id="cabinTag"></span></h2>
+    <div class="cabin-view">
+      <img id="cam" alt="Live webcam with face landmarks" hidden>
+      <svg id="driver" viewBox="0 0 320 240" role="img" aria-label="Schematic driver driven by sensor values"></svg>
+    </div>
+    <div class="caption" id="cabinCaption"></div>
+    <div class="strips" id="strips"></div>
+  </section>
+
+  <section class="panel decision">
+    <h2>Detection <span class="tag" id="modeTag"></span></h2>
+    <div class="alerts" id="alerts" aria-live="polite"></div>
+    <div class="subhead">Class posterior <span class="muted">(threshold &Gamma; = 0.85)</span></div>
+    <div id="post"></div>
+    <div class="persist"><div class="persist-label" id="persistLabel"></div><div class="persist-bar"><i id="persistFill"></i></div></div>
+    <div class="subhead">Evidence per branch <span class="muted">(log-likelihood ratio vs normal, bounded to &plusmn;3)</span></div>
+    <div id="llr"></div>
+    <div class="corro" id="corro"></div>
+  </section>
+
+  <section class="panel can">
+    <h2>CAN bus <span class="tag" id="busTag"></span></h2>
+    <div class="latest" id="latestCmd"></div>
+    <div class="counters" id="counters"></div>
+    <div class="subhead">Rejected by the gateway</div>
+    <ol class="rejects" id="rejects"></ol>
+  </section>
+
+  <section class="panel psap">
+    <h2>Emergency centre and V2X <span class="tag" id="commsTag"></span></h2>
+    <div id="ecall"></div>
+  </section>
+</main>
+
+<footer class="ops">
+  <div class="cue" id="cue">Ready</div>
+  <div class="buttons">
+    <button data-cmd="script" data-arg="seizure" title="P">&#9654; 2-min run: seizure</button>
+    <button data-cmd="script" data-arg="syncope">&#9654; 2-min run: syncope</button>
+    <span class="sep"></span>
+    <button data-cmd="event" data-arg="seizure" title="S">Seizure</button>
+    <button data-cmd="event" data-arg="syncope" title="Y">Syncope</button>
+    <span class="sep"></span>
+    <button data-cmd="attack" data-arg="forge" title="F">Forge</button>
+    <button data-cmd="attack" data-arg="replay" title="R">Replay</button>
+    <button data-cmd="attack" data-arg="tamper" title="T">Tamper</button>
+    <button data-cmd="attack" data-arg="implausible" title="I">Compromised ECU</button>
+    <span class="sep"></span>
+    <button data-cmd="fault" data-arg="blind" class="toggle" title="B">Blind camera</button>
+    <button data-cmd="fault" data-arg="imu_drop" class="toggle" title="U">IMU unplugged</button>
+    <button data-cmd="fault" data-arg="ecu_hang" class="toggle" title="H">ECU hang</button>
+    <button data-cmd="fault" data-arg="cellular_down" class="toggle" title="C">Cellular down</button>
+    <span class="sep"></span>
+    <button data-cmd="reset" class="danger" title="Esc">Reset (Esc)</button>
+  </div>
+  <div class="timing" id="timing"></div>
+</footer>
+<script src="/static/app.js"></script>
+</body>
+</html>

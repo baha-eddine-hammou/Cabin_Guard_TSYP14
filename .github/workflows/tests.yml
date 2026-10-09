@@ -16,7 +16,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install
-        run: pip install -e "prototype[dev]" python-can cantools
+        run: pip install -e "prototype[dev,demo]"
       - name: Unit, pipeline and fault tests
         working-directory: prototype
         run: python -m pytest -q

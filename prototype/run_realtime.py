@@ -23,6 +23,7 @@ import numpy as np
 
 from cabinguard import config
 from cabinguard.pipeline import Bus, CabinGuardECU, VehicleSide
+from cabinguard.hardware import clock
 from cabinguard.simulator import MultimodalSensorSimulator, ScenarioType
 
 DEMO_KEY = bytes(range(16))
@@ -78,7 +79,7 @@ def main() -> None:
                                 CameraFrontEnd(args.camera) if args.camera is not None else None)
         time.sleep(2.5)                                  # fill the 2 s IMU window
 
-    compute_ms, t0, k = [], time.monotonic(), 0
+    compute_ms, t0, k = [], clock(), 0
     speed = config.HIGHWAY_CRUISE_SPEED_MS
     try:
         while True:
@@ -104,7 +105,7 @@ def main() -> None:
                       f"P(N/Sy/Sz)={post.get('Normal', 0):.2f}/{post.get('Syncope', 0):.2f}/{post.get('Seizure', 0):.2f}"
                       f"  {state:18s}" + (f" v={vehicle.speed_ms * 3.6:5.1f} km/h decel={g.decel_mss:+.1f}" if vehicle else ""))
             if not args.fast:
-                time.sleep(max(0.0, t0 + k * config.FUSION_DT - time.monotonic()))
+                time.sleep(max(0.0, t0 + k * config.FUSION_DT - clock()))
     except KeyboardInterrupt:
         pass
     for b in {id(ecu_bus): ecu_bus, id(veh_bus): veh_bus}.values():

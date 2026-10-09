@@ -150,6 +150,7 @@ class VehicleSide:
     received_mec: list = field(default_factory=list)
     denm_sent: list = field(default_factory=list)
     lateral_m: float = 0.0          # 0 = centre of the travel lane, negative = towards the shoulder
+    sealed_mec: bytes | None = None  # the ECIES-sealed MEC handed to the bearers, for display
 
     def __post_init__(self):
         self.gateway = VehicleGateway(self.key)
@@ -177,7 +178,8 @@ class VehicleSide:
             mec = MEC(etiology, d.top_confidence if d else 0.0,
                       int(1000 * (t - (ecu.event_t or t))), _sensor_names(d), hr,
                       self.signer.next_seq(), int(time.time()))
-            self.notifier.submit(seal_for_psap(self.signer.sign(mec), self.psap.public_key), t)
+            self.sealed_mec = seal_for_psap(self.signer.sign(mec), self.psap.public_key)
+            self.notifier.submit(self.sealed_mec, t)
             self._mec_submitted = True
         if g.phase >= 3 and not self.denm_sent:
             self.denm_sent.append(build_denm(0x5A88B1, self.speed_ms * 3.6, self.signer))
