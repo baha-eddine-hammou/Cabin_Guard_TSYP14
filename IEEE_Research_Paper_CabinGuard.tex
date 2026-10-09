@@ -18,7 +18,7 @@
 
 \begin{document}
 
-\title{CabinGuard-ADI: Bounded-Evidence Multimodal Detection of Acute Driver Incapacitation with an Authenticated Minimum-Risk Response\thanks{Submitted to the IEEE VTS TSYP14 CabinGuard-ADI Technical Challenge, Phase 1. Code, trained models and every result file accompany the submission.}}
+\title{CabinGuard-ADI: Bounded-Evidence Multimodal Detection of Acute Driver Incapacitation with an Authenticated Minimum-Risk Response\thanks{Submitted to the IEEE VTS TSYP14 CabinGuard-ADI Technical Challenge, Phase 1. Code, models and every result file accompany the submission.}}
 
 % Phase 1 review is anonymous: no names, affiliations or e-mail addresses.
 \author{\IEEEauthorblockN{Anonymous Authors}
@@ -107,7 +107,7 @@ The sensing layer has three physical sensors, shown on the left of Fig.~\ref{fig
 
 \section{Detection Methodology}
 \subsection{Features}
-The camera front end detects pulse peaks in the POS signal~\cite{wang2017pos}; in the public recordings used for training the beats are ECG R-peaks instead. Over a 10\,s window the pulse-rhythm vector $\mathbf{c}$ holds the rate from the median inter-beat interval, its difference from the driver's own running baseline, the coefficient of variation of the intervals, and the fraction $a$ of the window not covered by intervals shorter than 2\,s. Ventricular fibrillation, flutter and asystole produce no pulse, so they raise $a$ towards one. Eye opening is the eye aspect ratio of Soukupov\'a and \v{C}ech~\cite{soukupova2016}, computed from six eyelid landmarks.
+The camera front end detects pulse peaks in the POS signal~\cite{wang2017pos}; in the public recordings used for training the beats are ECG R-peaks instead. Over a 10\,s window the pulse-rhythm vector $\mathbf{c}$ holds the rate from the median inter-beat interval, its difference from the driver's own running baseline, the coefficient of variation of the intervals, and the fraction $a$ of the window not covered by intervals shorter than 2\,s. Ventricular fibrillation, flutter and asystole produce no pulse and raise $a$ towards one. Eye opening is the eye aspect ratio of Soukupov\'a and \v{C}ech~\cite{soukupova2016} from six eyelid landmarks.
 \begin{equation}
 e=\frac{\lVert p_2-p_6\rVert+\lVert p_3-p_5\rVert}{2\,\lVert p_1-p_4\rVert}
 \label{eq:ear}
@@ -149,14 +149,14 @@ Equation~\eqref{eq:cap} holds for $1.91<c<3.81$, and $c=3$ is used. A missing br
 The watchdog sets the flag $F$ that starts the MRM when one event class keeps $P(C\mid\mathbf{x})\ge\Gamma$ for $T_{\mathrm{ver}}=2$\,s and at least two physical sensors give $\bar\lambda_b(C)\ge1$. The camera feeds two branches but counts as one sensor, so a blinded lens reporting closed eyes and no pulse cannot decide alone.
 
 \section{Safety Response and Fault Handling}
-Once $F$ is set, the state machine follows the transition-demand sequence of UN Regulation No.~157~\cite{unece157} with design values of our own: a 3\,s audible and haptic alert that the driver cancels by braking or by more than 4\,Nm of steering torque, unless the torque coincides with clonic motion or a clenched grip; hazard lights and escalation; braking at $-3.2$\,m/s$^2$ from 10\,s after the alert with a lateral move to the shoulder; and at standstill the parking brake and door unlock. The emergency call is placed when the alert goes unanswered, not after the stop.
+Once $F$ is set, the state machine follows the transition-demand sequence of UN Regulation No.~157~\cite{unece157} with design values of our own: a 3\,s audible and haptic alert that the driver cancels by braking or by more than 4\,Nm of steering torque, unless the torque coincides with clonic motion or a clenched grip; hazard lights and escalation; braking at $-3.2$\,m/s$^2$ from 10\,s after the alert with a move to the shoulder; and at standstill the parking brake and door unlock. The emergency call is placed when the alert goes unanswered, not after the stop.
 
 The watchdog derives the mode from sensor freshness. Losing the camera removes the cardiac and vision branches (degraded mode 1), losing the accelerometer removes the motion branch (degraded mode 2), and with fewer than two sensors left no MRM may start and the driver is warned instead (degraded mode 3). When the camera reports no pulse or closed eyes while the wheel shows an upright driver steering with more than 1\,Nm, the readings contradict each other, so the camera is distrusted for 10\,s and the event is logged.
 
-The gateway trusts no command. A frame must pass authentication and a plausibility gate that allows only the phase order of the state machine and decelerations between 0 and $-4$\,m/s$^2$. The command doubles as an alive signal: after 300\,ms without a valid frame the gateway flags an ECU fault and, if the driver is still in control, actuates nothing; if a manoeuvre is already under way it completes the stop, because a driver judged incapacitated cannot take over. The host itself goes silent after three consecutive 100\,ms deadline overruns. The emergency message is retried with 1, 2 and 4\,s backoff, then sent by SMS, then kept and retried every 30\,s; the manoeuvre never waits for it.
+The gateway trusts no command. A frame must pass authentication and a plausibility gate that allows only the phase order of the state machine and decelerations between 0 and $-4$\,m/s$^2$; it does not check how long each phase lasts, so a compromised host holding the key could brake at $-4$\,m/s$^2$ within three frames. The command doubles as an alive signal: after 300\,ms without a valid frame the gateway flags an ECU fault and, if the driver is still in control, actuates nothing; if a manoeuvre is already under way it completes the stop, because a driver judged incapacitated cannot take over. The host itself goes silent after three consecutive 100\,ms deadline overruns. The emergency message is retried with 1, 2 and 4\,s backoff, then sent by SMS, then kept and retried every 30\,s; the manoeuvre never waits for it.
 
 \section{Cybersecurity and Threat Model}
-The protected assets are the vehicle actuators, the driver's physiological data, the integrity of the emergency message and the driver's identity and location. The sensor link inside the cabin is protected against corruption by its CRC but not against an attacker with physical access, which is outside the scope; the CAN bus, the cellular network and the radio channel are untrusted, and the gateway is the trusted boundary in front of the actuators. Table~\ref{tab:threats} lists the threats and the control that answers each.
+The protected assets are the vehicle actuators, the driver's physiological data, the integrity of the emergency message and the driver's identity and location. The sensor link inside the cabin is protected against corruption by its CRC but not against an attacker with physical access; that attacker and a compromised host holding the CAN key are outside the scope, a residual risk; the CAN bus, the cellular network and the radio channel are untrusted, and the gateway is the trusted boundary in front of the actuators. Table~\ref{tab:threats} lists the threats and the control that answers each.
 
 \begin{table}[!t]
 \caption{Threats, controls and the fault-matrix case that exercises each}
@@ -173,7 +173,7 @@ Tampered frame & MAC check, alive timeout & tampered frames \\
 Valid MAC, unsafe value & phase order, $-4$\,m/s$^2$ limit & implausible command \\
 Camera blinding or spoofing & cross-sensor interlock, two-sensor rule & optical blinding \\
 Sensor loss or stale data & freshness, degraded modes & IMU, seat stale \\
-ECU hang & fail-silent host, gateway takeover & two processing cases \\
+ECU hang & fail-silent host, gateway stop & two hang cases \\
 Network outage & retry, SMS fallback, queue & two bearer cases \\
 Message forgery, eavesdropping & ECDSA P-256 signature, ECIES to PSAP & unit tests \\
 \bottomrule
@@ -266,7 +266,7 @@ IMU lost & \FaNoImu & \SyNoImu & \SzNoImu; \SzModNoImu & \LatSyNoImu, \LatSzNoIm
 The window $W$ was searched over 0, 2, 4 and 8\,s on these episodes, with the median syncope latency growing from \SweepLatZero\ to \SweepLatEight\,s; $W=2$\,s, the shortest with the highest syncope sensitivity, was chosen on test episodes and is optimistic.
 
 
-All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding, or tampered, replayed, forged or implausible commands; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. On one laptop core a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, which the three-overrun rule tolerates.
+All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding, or tampered, replayed, forged or implausible commands; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. On one laptop core a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, within the 100\,ms deadline.
 
 \section{Conclusion}
 Bounded evidence and two physical sensors made the detector sensitive and quiet on real driving, and the vehicle moves only on commands a fail-safe gateway authenticates. Three limits remain. The vision and posture likelihoods are expert-set and their channels modelled, so the fused results above are an upper estimate until those channels are measured; the motion branch learns seizure motion from patients lying in bed with a neck sensor, raises alarms during real driving on its own, and no recording yet measures seizure motion at a headrest; and the composite episodes assume that the branches are independent given the class. The code already runs on an ESP32 sensor node, a camera and a CAN bus, where Phase 2 will measure the eye, head and seat likelihoods, headrest seizure motion and pulse accuracy.

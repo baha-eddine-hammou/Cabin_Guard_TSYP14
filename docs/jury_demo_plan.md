@@ -23,6 +23,7 @@ kept for the reasoning and the corrections.
 - `cabinguard/demo/runner.py` paces cycles on `time.perf_counter` and plays the scripted run with presenter cues.
 - `cabinguard/demo/server.py` and `static/` are the dashboard: FastAPI, one WebSocket and plain HTML, CSS and JavaScript, with no framework and nothing loaded from the internet. NiceGUI (M3) was not needed.
 - The camera path uses the MediaPipe Tasks FaceLandmarker with the model file shipped in `prototype/models/`.
+- Accepted residual risk (decided): a compromised ECU that holds the SecOC key passes both gateway checks. The gateway checks the order of the phases but not their duration, so such an ECU can reach phase 3 braking at -4 m/s² with the shoulder move within three frames (300 ms). Protecting the host and its key is out of scope; the paper states this in Sections VI and VII. If a juror asks, the Phase 2 answer is gateway-side minimum phase durations, a gateway-side brake-pedal cancel and a phase-3 deceleration cap.
 - Not built yet: the DATASET REPLAY tier (I3, needs the Colab run), the physical CAN bench (O2), the MATLAB checker (O3) and the ESP32 hardening (I2).
 
 **The 2-minute demo** (times from pressing P; measured on the in-process run).
@@ -47,7 +48,7 @@ kept for the reasoning and the corrections.
 | ESP32 | 1-4 | Section 5 stage 1: port found by USB VID/PID, reconnect on unplug, clear the IMU window on an I2C error, brake foot switch; headrest IMU, seat FSR and grip pads on a chair | `--serial` turns the IMU and seat chips LIVE and `tests/test_hardware.py` passes |
 | MATLAB | 2-5 | Read `--record` session files; recompute every 0x120 MAC with an independent AES-CMAC checked against RFC 4493 vectors; plot the session timeline | Zero disagreements with the gateway's verdicts on a recorded run |
 | CAN bench | 3-6 | Buy two adapters; run `run_realtime.py` and `run_gateway.py` on a physical 500 kbit/s bus with 120 Ω at both ends; read it in MATLAB Vehicle Network Toolbox | The forged-frame attack is rejected on the wire |
-| Talk and paper | 1-7 | The 4-minute talk; re-run the fault matrix in Colab (the shoulder stop and the 0x121 frame changed its behaviour); the Phase 2 paper; a screen recording of a full rehearsal as the last fallback | Talk timed at 4:00 with the 2-minute demo inside |
+| Talk and paper | 1-7 | The 4-minute talk; the Phase 2 paper (the fault matrix was re-run in Colab after the shoulder stop and 0x121: 140 of 140 runs pass); a screen recording of a full rehearsal as the last fallback | Talk timed at 4:00 with the 2-minute demo inside |
 
 This plan merges the four proposals, keeps what each judge rated highest, and corrects every factual error the judges found. A final critic pass found further errors; those checked against the code and PyPI are folded into the text, and Appendix B lists all of them. Appendix A lists the earlier corrections with their evidence.
 
@@ -142,7 +143,7 @@ Abbreviations used throughout: MRM = minimum-risk manoeuvre; SecOC = the AUTOSAR
   - the CARLA client (`carla_worker`).
 
   If a child's heartbeat stops, its channel goes stale. The watchdog then shows a designed degraded mode, and the child restarts. This matters because the ECU deliberately fails silent after three consecutive deadline overruns. That rule stays; it is not weakened for the demo.
-- **Measured headroom so far.** `results/fault_matrix.json` gives ECU compute of 4.2 ms median, 8.3 ms p99 and 13.6 ms max on synthetic signals. That was not measured on the jury PC with the camera and UI running, so it must be re-measured there.
+- **Measured headroom so far.** `results/fault_matrix.json` (Colab re-run after the shoulder stop and 0x121) gives ECU compute of 5.8 ms median, 11.0 ms p99 and 81.2 ms max on synthetic signals, all within the 100 ms deadline. That was not measured on the jury PC with the camera and UI running, so it must be re-measured there.
 - **Roles.** `--role all` is the default. `--role ecu` and `--role vehicle` split the same nodes across two PCs for the Phase 2 bench.
 
 ### 2.2 Message and topic contract between the core and the front ends
