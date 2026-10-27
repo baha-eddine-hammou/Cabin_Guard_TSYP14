@@ -95,6 +95,18 @@ def main() -> None:
         macros[f"SweepFull{tag}"] = fmt(a["false_mrm_per_hour"], 2)
         macros[f"SweepReal{tag}"] = fmt(r["false_mrm_per_hour"], 2)
         macros[f"SweepLat{tag}"] = fmt(a["events"]["Syncope"]["median_latency_s"], 1)
+    sel = f.get("w_selection")               # nested choice of W; absent in results made before it existed
+    if sel is not None:
+        ws = sorted(set(sel["chosen_by_fold_s"].values()))
+        macros["WFolds"] = str(len(sel["chosen_by_fold_s"]))
+        macros["WChosen"] = ", ".join(f"{w:g}" for w in ws)
+        macros["WAllSame"] = "1" if len(ws) == 1 else "0"
+        h = sel["held_out"]
+        ev = h["events"]
+        rec = ev.get("Seizure@clinical", ev["Seizure@mimic"])
+        macros["FaNested"] = fmt(h["false_mrm_per_hour"], 2)
+        macros["SyNested"] = f"{ev['Syncope']['detected']}/{ev['Syncope']['n']}"
+        macros["SzNested"] = f"{rec['detected']}/{rec['n']}"
 
     cases = m["cases"]
     macros["FaultCases"] = str(len(cases))

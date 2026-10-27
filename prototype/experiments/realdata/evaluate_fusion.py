@@ -247,9 +247,63 @@ CONFIGS = {
     "IMU lost (cardiac + vision + posture)": (("cardiac", "vision", "posture"), 3.0, True, SMOOTH_S),
 }
 # Smoothing window sweep, reported in full rather than only the chosen value.
-for _w in (0.0, 2.0, 4.0, 8.0):
+SWEEP_W = (0.0, 2.0, 4.0, 8.0)
+for _w in SWEEP_W:
     CONFIGS[f"sweep: full fusion, smoothing {_w:g} s"] = (("cardiac", "motion", "vision", "posture"), 3.0, True, _w)
     CONFIGS[f"sweep: real branches, smoothing {_w:g} s"] = (("cardiac", "motion"), 3.0, True, _w)
+
+
+def tally(outcomes) -> dict:
+    """Summary metrics from per-episode outcomes ``(fold, kind, n, onset, triggers)``."""
+    hours = trig_n = 0.0
+    by_class, events = {}, {}
+    for _, kind, n, onset, trig in outcomes:
+        if kind == "Normal":
+            trig_n += len(trig)
+            hours += n * STEP / 3600
+            for _, c in trig:
+                by_class[c] = by_class.get(c, 0) + 1
+            continue
+        truth = "Seizure" if kind.startswith("Seizure") else "Syncope"
+        post = [(k, c) for k, c in trig if k >= onset]
+        ev = events.setdefault(kind, {"n": 0, "detected": 0, "wrong_class": 0, "pre_onset_false": 0, "lat": []})
+        ev["n"] += 1
+        ev["pre_onset_false"] += sum(1 for k, _ in trig if k < onset)
+        if post:
+            k, c = post[0]
+            if c == truth:
+                ev["detected"] += 1
+                ev["lat"].append((k - onset) * STEP)
+            else:
+                ev["wrong_class"] += 1
+    out = {"false_mrm_per_hour": trig_n / hours if hours else None, "driving_hours": hours,
+           "false_by_class": by_class, "events": {}}
+    for kind, ev in sorted(events.items()):
+        lat = ev.pop("lat")
+        out["events"][kind] = {**ev, "sensitivity": ev["detected"] / ev["n"],
+                               "median_latency_s": float(np.median(lat)) if lat else None,
+                               "p90_latency_s": float(np.percentile(lat, 90)) if lat else None}
+    return out
+
+
+def select_w_out_of_fold(per_w: dict) -> dict:
+    """Nested choice of the smoothing window W, so no episode helps choose the W it is scored with.
+
+    For each episode fold, W is chosen on the other folds by the rule stated in the paper (highest
+    syncope sensitivity, the shortest W on ties); that fold is then scored with the chosen W, and the
+    held-out scores of all folds are pooled.
+    """
+    folds = sorted({o[0] for outs in per_w.values() for o in outs})
+    chosen, pooled = {}, []
+    for f in folds:
+        def syncope_sens(w):
+            ev = tally([o for o in per_w[w] if o[0] != f])["events"].get("Syncope")
+            return ev["sensitivity"] if ev else 0.0
+        w_f = max(sorted(per_w), key=lambda w: (syncope_sens(w), -w))
+        chosen[str(f)] = w_f
+        pooled += [o for o in per_w[w_f] if o[0] == f]
+    return {"rule": "per fold: highest syncope sensitivity on the other folds, shortest W on ties",
+            "candidates_s": sorted(per_w), "chosen_by_fold_s": chosen, "held_out": tally(pooled)}
 
 
 def main() -> None:
@@ -302,6 +356,7 @@ def main() -> None:
     mmods = motion_models(fold_of, sz_fold_of, acc, mh, epi, sz)
 
     results = {name: {"Normal": {"triggers": 0, "hours": 0.0, "by_class": {}}, "events": {}} for name in CONFIGS}
+    per_w = {w: [] for w in SWEEP_W}         # full-fusion sweep outcomes per episode, for the nested choice of W
     for ei, (kind, r, t0, n, onset) in enumerate(episodes):
         m = rec == r
         card = hold(X[m], t[m], t0, n)
@@ -332,6 +387,8 @@ def main() -> None:
             clf = FusionClassifier(cmods[r], mmods[f], cap=cap, enabled=enabled)
             trig = run_episode(clf, card, mot, chans, require_two=two, smooth_s=sm)
             res = results[name]
+            if name.startswith("sweep: full fusion, smoothing "):
+                per_w[sm].append((f, kind, n, onset, trig))
             if kind == "Normal":
                 res["Normal"]["triggers"] += len(trig)
                 res["Normal"]["hours"] += n * STEP / 3600
@@ -368,11 +425,19 @@ def main() -> None:
                                  "median_latency_s": float(np.median(lat)) if lat else None,
                                  "p90_latency_s": float(np.percentile(lat, 90)) if lat else None}
         summary["configs"][name] = s
+    for w, outs in per_w.items():             # the per-episode tally must reproduce the aggregate exactly
+        agg, again = summary["configs"][f"sweep: full fusion, smoothing {w:g} s"], tally(outs)
+        assert json.dumps(agg, sort_keys=True) == json.dumps(again, sort_keys=True), f"tally differs at W={w}"
+    summary["w_selection"] = select_w_out_of_fold(per_w)
     out = ROOT / "results" / "fusion_metrics.json"
     out.write_text(json.dumps(summary, indent=2))
     for name, s in summary["configs"].items():
         ev = {k: (round(v["sensitivity"], 2), v["median_latency_s"], v["wrong_class"]) for k, v in s["events"].items()}
         print(f"{name:40s} FA/h {s['false_mrm_per_hour']:.3f}  {ev}")
+    sel = summary["w_selection"]
+    print("W chosen out of fold:", sel["chosen_by_fold_s"], " held-out FA/h",
+          round(sel["held_out"]["false_mrm_per_hour"], 3),
+          {k: round(v["sensitivity"], 2) for k, v in sel["held_out"]["events"].items()})
 
 
 if __name__ == "__main__":

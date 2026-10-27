@@ -131,7 +131,8 @@ each drop their `(a)`/`(b)` label, since rule 13 applies to sub-panels only.
 
 ## Code and repository
 
-- Heavy compute runs in the user's Google Colab notebook
+- Heavy compute runs on the user's own machine: their PC (preferred since
+  October 2026) or the Google Colab notebook
   (`prototype/experiments/colab/CabinGuard_Colab.ipynb`), never in the Claude
   session: no training, evaluation, feature extraction or dataset download
   here. Follow `.claude/skills/colab-compute/SKILL.md`.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import sys
 from pathlib import Path
 
@@ -78,7 +79,10 @@ def main() -> None:
     ap.add_argument("--seeds", type=int, default=10)
     args = ap.parse_args()
     clf = FusionClassifier()
-    out = {"scope": "synthetic sensor signals through the full software pipeline", "seeds": args.seeds, "cases": {}}
+    out = {"scope": "synthetic sensor signals through the full software pipeline", "seeds": args.seeds, "cases": {},
+           # cycle times depend on the machine: record which one produced them
+           "host": {"system": platform.platform(), "cpu": platform.processor() or platform.machine(),
+                    "python": platform.python_version()}}
     cycle_ms = []
     for name, (sc, dur, kw, check, expect) in CASES.items():
         ok, lat = 0, []

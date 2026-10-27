@@ -32,6 +32,14 @@ If such a job is already running when this applies, stop it.
 - `export_paper_numbers.py` and the paper build, once the user has brought
   Colab results into the repository.
 
+## The user's PC
+
+Since October 2026 the user runs these jobs on their own PC, from the
+repository root, with the same scripts the notebook calls (`cd prototype`,
+then `python experiments/...`). Give them the exact commands in order, which
+outputs to commit, and what to attach if they prefer; the Colab notebook stays
+as the fallback and must keep working.
+
 ## Workflow when results are needed
 
 1. Make the code change, and add or update the matching cell in the Colab
@@ -45,5 +53,5 @@ If such a job is already running when this applies, stop it.
    `export_paper_numbers.py`, update the paper, and verify it (checker, page
    count, rendered tables).
 
-Never quote a number in the paper that was not produced by the Colab run and
-committed to `prototype/results/`.
+Never quote a number in the paper that was not produced by a run on the user's
+machine (PC or Colab) and committed to `prototype/results/`.
