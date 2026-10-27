@@ -13,10 +13,12 @@ const STRIPS = [["ear", "Eyes (EAR)", 2, [0, 0.4]], ["hr_bpm", "Pulse, bpm", 0, 
                 ["torque_nm", "Torque, Nm", 1, [-5, 5]]];          // signed: the ESP32 reports both directions
 const HISTORY = 600;                       // 60 s at 10 Hz
 const LOG_KEEP_S = 10;                     // watchdog and demo notes stay this long (the camera distrust time)
+const OVERRIDE_HOLD_S = 3;                 // clonic torque crosses 4 Nm on some cycles only: hold the note, no flicker
 const hist = Object.fromEntries(STRIPS.map(([k]) => [k, []]));
 let rejects = [];
 let logs = [];
 let lastK = 0;
+let overrideUntil = -1;
 let sock = null;
 
 // ------------------------------------------------------------------ socket ---
@@ -36,14 +38,24 @@ const KEYS = { s: ["event", "seizure"], y: ["event", "syncope"], f: ["attack", "
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;     // Ctrl+R reloads the page, it is not a replay
   if (e.key === "Escape") return send("reset");
-  if (e.key.toLowerCase() === "l") { const r = document.documentElement; r.dataset.theme = r.dataset.theme === "light" ? "dark" : "light"; return; }
+  if (e.key.toLowerCase() === "l") return toggleTheme();
   const k = KEYS[e.key.toLowerCase()];
   if (k) send(...k);
 });
 
+// ------------------------------------------------------------------- theme ---
+function setTheme(t) {
+  document.documentElement.dataset.theme = t;
+  $("theme").textContent = t === "light" ? "Dark theme (L)" : "Light theme (L)";
+  try { localStorage.setItem("cg-theme", t); } catch (e) { /* private window: the choice lasts this page only */ }
+}
+function toggleTheme() { setTheme(document.documentElement.dataset.theme === "light" ? "dark" : "light"); }
+$("theme").addEventListener("click", toggleTheme);
+setTheme(document.documentElement.dataset.theme);
+
 // ------------------------------------------------------------------ render ---
 function render(r) {
-  if (r.k < lastK) { rejects = []; logs = []; STRIPS.forEach(([k]) => (hist[k] = [])); }   // engine was reset
+  if (r.k < lastK) { rejects = []; logs = []; overrideUntil = -1; STRIPS.forEach(([k]) => (hist[k] = [])); }   // engine was reset
   lastK = r.k;
   $("clock").textContent = `${r.t.toFixed(1)} s`;
   $("cue").textContent = r.cue || "";
@@ -231,7 +243,8 @@ function renderDecision(r) {
   $("persistFill").style.width = `${frac * 100}%`;
   $("persistLabel").textContent = d.candidate === "Normal"
     ? "No event candidate"
-    : `${d.candidate} held for ${d.persistence_s.toFixed(1)} of ${d.persistence_needed_s} s` + (d.trigger ? ": confirmed" : "");
+    : `${d.candidate} held for ${d.persistence_s.toFixed(1)} of ${d.persistence_needed_s} s` + (!d.trigger ? ""
+      : r.mrm.state === "NORMAL" || r.mrm.etiology === d.candidate ? ": confirmed" : ": no effect, the manoeuvre is already latched");
   const cls = d.shown_class;
   $("llr").innerHTML = BRANCHES.map(([b, name, sensor]) => {
     const l = d.branch_llr[b] ? d.branch_llr[b][cls] : null;
@@ -245,13 +258,31 @@ function renderDecision(r) {
   $("corro").innerHTML = `Physical sensors agreeing on ${cls}: <span class="ok">${agree.length ? agree.join(", ") : "none"}</span> (${agree.length} of 3; a manoeuvre needs 2)`;
   let al = "";
   if (d.spoof) al += `<div class="alert">Spoofing interlock: camera says unconscious, seat and wheel show an active driver. Camera distrusted for ${d.distrust_s} s.</div>`;
-  if (d.override_suppressed) al += `<div class="alert info">Steering torque coincides with clonic motion: it cannot cancel the alert.</div>`;
-  if (d.degraded > 0) al += `<div class="alert">${d.mode}</div>`;
+  if (d.override_suppressed) overrideUntil = r.t + OVERRIDE_HOLD_S;
+  if (r.t < overrideUntil) al += `<div class="alert info">Steering torque coincides with clonic motion: it cannot cancel the alert.</div>`;
+  if (d.degraded > 0) al += `<div class="alert">${d.mode}${cameraWhy(r)}</div>`;
+  // Once confirmed, the manoeuvre and the eCall keep the etiology; the live evidence may move on (postictal stillness).
+  const et = r.mrm.etiology, other = et === "Seizure" ? "Syncope" : "Seizure";
+  if (r.mrm.state !== "NORMAL" && r.mrm.state !== "ECU_FAILED" && (et === "Seizure" || et === "Syncope")
+      && (d.posteriors[other] ?? 0) > (d.posteriors[et] ?? 0)) {
+    al += `<div class="alert info">Etiology latched at confirmation: ${et}.` +
+      (et === "Seizure" ? " After a seizure the driver lies still, which the camera and seat read like a faint;" : "") +
+      ` the manoeuvre and the emergency message keep the confirmed etiology.</div>`;
+  }
   // gateway lines are already itemised in the CAN panel; here only the watchdog and the demo notes speak
   logs = logs.concat((r.log || []).filter((x) => !x.startsWith("[gateway")).map((x) => [r.t, x]))
              .filter(([t]) => r.t - t < LOG_KEEP_S).slice(-3);
   logs.forEach(([, x]) => (al += `<div class="alert info">${x}</div>`));
   $("alerts").innerHTML = al;
+}
+
+// Why the camera is out, from the same inputs the feature extractor checked.
+function cameraWhy(r) {
+  const i = r.inputs, d = r.decision;
+  if (r.health.camera) return d.degraded === 1 ? ": camera distrusted by the spoofing interlock" : "";
+  if (!i.face) return ": no face found (head turned or bowed out of the camera's view, or lens covered)";
+  if (i.snr_db != null && i.snr_db < d.snr_min_db) return ": face found, but the forehead patch is too dark or saturated (exposure check)";
+  return ": no fresh camera frame";
 }
 
 const WHY = {

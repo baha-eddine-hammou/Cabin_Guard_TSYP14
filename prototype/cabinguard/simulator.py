@@ -9,7 +9,10 @@ the real-data evaluation:
 * syncope: a pulseless ventricular arrhythmia at ``EVENT_ONSET_S``, loss of
   consciousness ``LOC_DELAY_S`` later (head drop, eye closure, hands off);
 * seizure: a tonic phase (clenched grip, eyes half open) followed by clonic
-  jerks after Conradsen et al. (2013), with ictal tachycardia.
+  jerks after Conradsen et al. (2013), with ictal tachycardia. By default the
+  convulsion never ends; with ``seizure_s`` it stops that long after onset and
+  a still, unresponsive postictal state follows (eyes closed, head down, hands
+  off, heart rate settling), which the live demo uses.
 
 These signals are synthetic. They exercise the software path; they are not
 evidence of detection performance, which comes from the PhysioNet experiments.
@@ -63,9 +66,11 @@ class SensorSnapshot:
 
 
 class MultimodalSensorSimulator:
-    def __init__(self, scenario: ScenarioType, duration_s: float = 40.0, seed: int = 42):
+    def __init__(self, scenario: ScenarioType, duration_s: float = 40.0, seed: int = 42,
+                 seizure_s: float | None = None):
         self.scenario = scenario
         self.duration_s = duration_s
+        self.seizure_end_s = None if seizure_s is None else EVENT_ONSET_S + max(seizure_s, TONIC_S)
         self.dt = config.FUSION_DT
         self.rng = np.random.default_rng(seed)
         self.total_steps = int(round(duration_s / self.dt))
@@ -97,6 +102,8 @@ class MultimodalSensorSimulator:
             hr = 72.0 + 3.0 * np.sin(2 * np.pi * t / 20.0)
             if self.scenario == ScenarioType.EPILEPTIC_SEIZURE and t >= EVENT_ONSET_S:
                 hr = 72.0 + min(1.0, (t - EVENT_ONSET_S) / 10.0) * 50.0      # ictal tachycardia
+                if self.seizure_end_s is not None and t >= self.seizure_end_s:
+                    hr = 95.0 + 27.0 * np.exp(-(t - self.seizure_end_s) / 60.0)   # settling after the seizure
             if self.scenario == ScenarioType.CARDIAC_SYNCOPE and t >= EVENT_ONSET_S:
                 break                                                      # no perfusing pulse
             if self.scenario == ScenarioType.OPTICAL_BLINDING_ATTACK and t >= EVENT_ONSET_S:
@@ -121,7 +128,9 @@ class MultimodalSensorSimulator:
         on = int((EVENT_ONSET_S + IMU_WINDOW_S) * IMU_FS)
         if self.scenario == ScenarioType.EPILEPTIC_SEIZURE:
             c = on + int(TONIC_S * IMU_FS)
-            acc[c:] += clonic_waveform((n - c) / IMU_FS, IMU_FS, 0.3, 0.08, np.log(1 / 0.08) / 40, rng)
+            e = n if self.seizure_end_s is None else min(n, int((self.seizure_end_s + IMU_WINDOW_S) * IMU_FS))
+            if e > c:
+                acc[c:e] += clonic_waveform((e - c) / IMU_FS, IMU_FS, 0.3, 0.08, np.log(1 / 0.08) / 40, rng)
         if self.scenario == ScenarioType.CARDIAC_SYNCOPE:
             s = on + int(LOC_DELAY_S * IMU_FS)
             slump = np.exp(-np.arange(int(0.6 * IMU_FS)) / 15.0) * np.sin(np.arange(int(0.6 * IMU_FS)) / 4.0)
@@ -158,6 +167,14 @@ class MultimodalSensorSimulator:
                 snap.fsr_pressure = float(np.clip(0.85 * (1 - p) + 0.15 * p + rng.normal(0, 0.03), 0, 1))
                 snap.grip = "DISENGAGED" if p > 0.4 else "ACTIVE"
                 snap.steering_torque_nm = float(abs(rng.normal(0.05, 0.03)))
+        elif sc == ScenarioType.EPILEPTIC_SEIZURE and ev and self.seizure_end_s is not None and t >= self.seizure_end_s:
+            snap.truth = "Seizure"                                          # postictal: still and unresponsive
+            p = min(1.0, (t - self.seizure_end_s) / 3.0)
+            snap.ear = float(0.08 + rng.normal(0, 0.01))
+            snap.pitch_deg = float(-25.0 * p + rng.normal(0, 2.0))
+            snap.fsr_pressure = float(np.clip(0.45 + rng.normal(0, 0.03), 0, 1))
+            snap.grip = "DISENGAGED"
+            snap.steering_torque_nm = float(abs(rng.normal(0.05, 0.03)))
         elif sc == ScenarioType.EPILEPTIC_SEIZURE and ev:
             snap.truth = "Seizure"
             p = min(1.0, (t - EVENT_ONSET_S) / 1.5)

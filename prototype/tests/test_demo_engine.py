@@ -224,3 +224,17 @@ def test_server_page_socket_and_command_filter():
     while not e.commands.empty():
         cmds.append(e.commands.get_nowait())
     assert [(c.name, c.arg) for c in cmds] == [("fault", "blind"), ("event", "seizure")]
+
+
+def test_demo_seizure_ends_and_simulator_default_is_unchanged():
+    """The demo seizure stops convulsing; without ``seizure_s`` the paper's scenario is bit-identical."""
+    from cabinguard.simulator import EVENT_ONSET_S, MultimodalSensorSimulator, ScenarioType
+    sz = ScenarioType.EPILEPTIC_SEIZURE
+    a = list(MultimodalSensorSimulator(sz, 40, 3))
+    b = list(MultimodalSensorSimulator(sz, 40, 3, seizure_s=None))
+    assert all(x.pitch_deg == y.pitch_deg and (x.imu_window_g == y.imu_window_g).all() for x, y in zip(a, b))
+    c = list(MultimodalSensorSimulator(sz, 90, 3, seizure_s=30))
+    late = [s for s in c if s.t > EVENT_ONSET_S + 36]          # 30 s seizure, 3 s settling, 2 s IMU window
+    assert late and all(s.grip == "DISENGAGED" and s.steering_torque_nm < 1.0 for s in late)
+    assert max(float(abs(s.imu_window_g - s.imu_window_g.mean(0)).max()) for s in late) < 0.15   # road vibration only
+    assert all(s.truth == "Seizure" for s in late)

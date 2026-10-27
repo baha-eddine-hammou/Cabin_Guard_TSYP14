@@ -5,11 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CabinGuard-ADI live demo</title>
 <link rel="stylesheet" href="/static/style.css">
+<script>  /* theme before first paint: ?theme=light|dark, else the last choice, else dark */
+  (function () {
+    var t = new URLSearchParams(location.search).get("theme");
+    try { t = t || localStorage.getItem("cg-theme"); } catch (e) {}
+    if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+  })();
+</script>
 </head>
 <body>
 <header class="top">
   <div class="brand">CabinGuard-ADI <span class="sub">live demo</span></div>
   <div class="chips" id="chips"></div>
+  <button id="theme" type="button" title="L">Light theme (L)</button>
   <div class="clock"><span id="clock">0.0 s</span><span id="conn" class="conn">connecting</span></div>
 </header>
 

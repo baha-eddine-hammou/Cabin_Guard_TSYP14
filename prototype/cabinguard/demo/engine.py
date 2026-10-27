@@ -44,6 +44,7 @@ BASE_DURATION_S = 900.0            # normal-driving stream length before it rest
 EVENTS = {"seizure": ScenarioType.EPILEPTIC_SEIZURE, "syncope": ScenarioType.CARDIAC_SYNCOPE}
 ATTACKS = ("forge", "replay", "tamper", "implausible")
 FAULTS = ("blind", "imu_drop", "seat_freeze", "ecu_hang", "cellular_down")
+SEIZURE_S = 45.0                   # demo seizure: 8 s tonic, then clonic jerks, then still postictal
 REPLAY_AGE = 30                    # the replayed frame was captured this many cycles (3 s) earlier
 # channels whose signals each fault overwrites (blind also overwrites the wheel torque when the seat is simulated)
 FAULT_CHANNELS = {"blind": ("pulse", "face"), "imu_drop": ("imu",), "seat_freeze": ("seat",)}
@@ -86,9 +87,10 @@ def restamp(snap: SensorSnapshot, now: float) -> SensorSnapshot:
 class SimStream:
     """One simulator scenario played from ``start_s``, re-stamped onto engine time."""
 
-    def __init__(self, scenario: ScenarioType, seed: int, start_s: float = 0.0, duration_s: float = 120.0):
+    def __init__(self, scenario: ScenarioType, seed: int, start_s: float = 0.0, duration_s: float = 120.0,
+                 seizure_s: float | None = None):
         self.scenario = scenario
-        self.sim = iter(MultimodalSensorSimulator(scenario, duration_s, seed))
+        self.sim = iter(MultimodalSensorSimulator(scenario, duration_s, seed, seizure_s=seizure_s))
         for _ in range(int(round(start_s / config.FUSION_DT))):
             next(self.sim)
 
@@ -187,7 +189,7 @@ class DemoEngine:
             # event_onset_t; the stream is as long as the base stream, so the event never runs out on stage
             self.event_stream = SimStream(EVENTS[cmd.arg], self.seed + 7,
                                           EVENT_ONSET_S - EVENT_LEAD_S - config.FUSION_DT,
-                                          EVENT_ONSET_S + BASE_DURATION_S)
+                                          EVENT_ONSET_S + BASE_DURATION_S, seizure_s=SEIZURE_S)
             if not s.staged:      # the event's signals come from the scenario on every channel
                 s.modes = {c: "sim" for c in CHANNELS}
         elif cmd.name == "attack" and cmd.arg in ATTACKS:
@@ -410,7 +412,7 @@ class DemoEngine:
                 "gamma": config.CONFIDENCE_THRESHOLD_GAMMA,
                 "persistence_s": round(d.persistence_seconds, 1), "persistence_needed_s": config.VERIFICATION_DURATION_S,
                 "trigger": bool(d.mrm_trigger_flag), "mode": d.mode, "degraded": int(d.degraded_level),
-                "spoof": bool(d.spoofing_detected), "distrust_s": DISTRUST_S,
+                "spoof": bool(d.spoofing_detected), "distrust_s": DISTRUST_S, "snr_min_db": config.MIN_OPTICAL_SNR_DB,
                 "override_suppressed": bool(d.override_suppressed),
                 "corroborating": list(d.corroborating_sensors), "branch_llr": llr, "shown_class": shown,
                 "corroborating_by_class": {c: sorted(d.raw.corroborating_sensors(c)) for c in ("Syncope", "Seizure")},

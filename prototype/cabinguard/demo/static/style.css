@@ -78,7 +78,8 @@ body {
 .muted { color: var(--muted); }
 
 #road { flex: 1; min-height: 0; width: 100%; }
-.hud { position: absolute; right: 14px; top: 38px; text-align: right; font-variant-numeric: tabular-nums; }
+.hud { position: absolute; right: 14px; top: 38px; text-align: right; font-variant-numeric: tabular-nums;
+       background: color-mix(in srgb, var(--surface) 88%, transparent); padding: 4px 8px; border-radius: 8px; }  /* readable over the road */
 .hud .speed { font-size: 42px; font-weight: 700; line-height: 1; }
 .hud .unit { font-size: 14px; color: var(--text-2); }
 .hud .row { font-size: 13px; color: var(--text-2); }
