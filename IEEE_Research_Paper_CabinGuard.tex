@@ -263,7 +263,7 @@ IMU lost & \FaNoImu & \SyNoImu & \SzNoImu; \SzModNoImu & \LatSyNoImu, \LatSzNoIm
 \end{tabular}
 \end{table}
 
-The window $W$ was searched over 0, 2, 4 and 8\,s on these episodes, with the median syncope latency growing from \SweepLatZero\ to \SweepLatEight\,s; $W=2$\,s, the shortest with the highest syncope sensitivity, was chosen on test episodes and is optimistic.
+The window $W$ was searched over 0, 2, 4 and 8\,s, with the median syncope latency growing from \SweepLatZero\ to \SweepLatEight\,s. In each of \WFolds\ episode folds, $W$ was chosen on the other folds as the shortest window with the highest syncope sensitivity; \ifnum\WAllSame=1 every fold chose \WChosen\,s, so the held-out results are those of Table~\ref{tab:fusion}.\else the folds chose \WChosen\,s, and the held-out full fusion gives \FaNested\ false manoeuvres per hour, syncope \SyNested\ and seizures \SzNested.\fi
 
 
 All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding, or tampered, replayed, forged or implausible commands; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. On one laptop core a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, within the 100\,ms deadline.
