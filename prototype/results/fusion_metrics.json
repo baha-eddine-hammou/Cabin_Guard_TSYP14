@@ -1062,5 +1062,82 @@
         }
       }
     }
+  },
+  "w_selection": {
+    "rule": "per fold: highest syncope sensitivity on the other folds, shortest W on ties",
+    "candidates_s": [
+      0.0,
+      2.0,
+      4.0,
+      8.0
+    ],
+    "chosen_by_fold_s": {
+      "0": 2.0,
+      "1": 2.0,
+      "2": 2.0,
+      "3": 2.0,
+      "4": 2.0
+    },
+    "held_out": {
+      "false_mrm_per_hour": 0.0,
+      "driving_hours": 22.173611111111107,
+      "false_by_class": {},
+      "events": {
+        "Seizure@0.1g": {
+          "n": 10,
+          "detected": 9,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.9,
+          "median_latency_s": 13.5,
+          "p90_latency_s": 16.2
+        },
+        "Seizure@0.2g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 17.549999999999997
+        },
+        "Seizure@0.5g": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 12.5,
+          "p90_latency_s": 21.449999999999992
+        },
+        "Seizure@clinical": {
+          "n": 10,
+          "detected": 8,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 0.8,
+          "median_latency_s": 22.25,
+          "p90_latency_s": 39.449999999999996
+        },
+        "Seizure@mimic": {
+          "n": 10,
+          "detected": 10,
+          "wrong_class": 0,
+          "pre_onset_false": 0,
+          "sensitivity": 1.0,
+          "median_latency_s": 11.0,
+          "p90_latency_s": 19.0
+        },
+        "Syncope": {
+          "n": 80,
+          "detected": 79,
+          "wrong_class": 0,
+          "pre_onset_false": 1,
+          "sensitivity": 0.9875,
+          "median_latency_s": 12.0,
+          "p90_latency_s": 14.600000000000001
+        }
+      }
+    }
   }
 }
