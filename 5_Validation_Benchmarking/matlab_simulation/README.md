@@ -37,6 +37,22 @@ sets, so start from the scripts.
 
 ## What is simulated
 
+![Top level of the Simulink model: ego plant, scenario reader, sensors and guidance; the CabinGuard supervisor; monitoring and logging](figures/simulink_top_level.png)
+
+The top level of the model has three areas:
+
+1. **Ego plant, state packaging, scenario reader, sensors, GNC:** the vehicle
+   plant (`Vehicle`) feeds its pose to the Scenario Reader (`SR`), which drives
+   the vision lane detector and three radar detection generators (front, rear,
+   right side); guidance, navigation and control (`GNC`) turns their detections
+   into the steering and acceleration commands.
+2. **Supervisor (CabinGuard) and go command:** the `CabinGuard` subsystem (the
+   chain in the `cg_sys_*` scripts) decides when the car takes over; `SysSel`
+   switches between that decision and a fixed timer (`TimerGo`).
+3. **Monitoring, stop condition and logging:** signals are logged to `calog`,
+   and the run stops if a steering or acceleration command becomes NaN.
+
+
 Driver incapacitated (syncope or seizure) → surrogate detector → fault
 injection → host (bounded-evidence fusion, 2 s verification, two-sensor rule,
 camera interlock, MRM state machine) → gateway (authenticated commands, 300 ms
