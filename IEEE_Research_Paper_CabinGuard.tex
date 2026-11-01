@@ -27,7 +27,7 @@
 \maketitle
 
 \begin{abstract}
-Driver monitoring systems detect drowsiness and distraction, not the sudden loss of driving capacity caused by cardiac syncope or a convulsive seizure. CabinGuard-ADI separates these two events from normal driving using four contactless channels: camera pulse rhythm, eyelid and head pose, a headrest accelerometer, and seat and steering-wheel sensors. The evidence of every channel is bounded so that no single sensor can trigger a vehicle response; a minimum-risk manoeuvre needs two physical sensors that agree for 2 seconds. The pulse-rhythm branch is trained on public PhysioNet recordings, including \DriveHours\ hours of road driving, ten annotated seizures and ventricular arrhythmia onsets; the motion branch only on recorded motion, including the neck accelerometry of clinical seizures in \MrSzBgPatients\ patients; both are evaluated across held-out records, subjects and patients. On out-of-fold composite episodes the fused detector started no manoeuvre in \FusionHours\ hours of real driving, a 95\,\% upper bound of \FaFullUpper\ per hour, against \FaOnlyCard\ false starts per hour for the pulse branch alone, and detected \SyFull\ syncope episodes and \SzFull\ seizure episodes built from clinical seizure motion, with median latencies of \LatSyFull\ and \LatSzFull\ seconds from onset. A gateway accepts only authenticated, fresh, plausible CAN commands and completes the stop if the detector fails. A signed and encrypted 76-byte medical extension reaches the emergency centre, while nearby vehicles are warned without the diagnosis. The eye, head and seat channels still use modelled likelihoods, and alone the motion branch raises alarms during real driving; the Phase 2 bench measures both.
+Driver monitoring systems detect drowsiness and distraction, not the sudden loss of driving capacity caused by cardiac syncope or a convulsive seizure. CabinGuard-ADI separates these two events from normal driving using four contactless channels: camera pulse rhythm, eyelid and head pose, a headrest accelerometer, and seat and steering-wheel sensors. The evidence of every channel is bounded so that no single sensor can trigger a vehicle response; a minimum-risk manoeuvre needs two physical sensors that agree for 2 seconds. The pulse-rhythm branch is trained on public PhysioNet recordings, including \DriveHours\ hours of road driving, ten annotated seizures and ventricular arrhythmia onsets; the motion branch only on recorded motion, including the neck accelerometry of clinical seizures in \MrSzBgPatients\ patients; both are evaluated across held-out records, subjects and patients. On out-of-fold composite episodes the fused detector started no manoeuvre in \FusionHours\ hours of real driving, a 95\,\% upper bound of \FaFullUpper\ per hour, and detected \SyFull\ syncope episodes and \SzFull\ seizure episodes built from clinical seizure motion, with median latencies of \LatSyFull\ and \LatSzFull\ seconds from onset. A gateway accepts only authenticated, fresh, plausible CAN commands and completes the stop if the detector fails. A signed and encrypted 76-byte medical extension reaches the emergency centre, while nearby vehicles are warned without the diagnosis. The eye, head and seat channels still use modelled likelihoods, and alone the motion branch raises alarms during real driving; the Phase 2 bench measures both.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -42,9 +42,7 @@ Two events dominate that scenario. Cardiac syncope is a transient loss of consci
 The contributions are a fusion rule under which no single sensor can start a manoeuvre, with the bound derived from the decision threshold; pulse-rhythm and motion detectors evaluated on public real recordings, including real road driving; a gateway that accepts only authenticated, plausible commands and fails safe; and an emergency message that gives the etiology to the emergency centre alone.
 
 \section{Related Work}
-Camera-based pulse measurement projects the skin colour signal onto a plane orthogonal to the skin tone (POS)~\cite{wang2017pos}; in a moving car, narrow-band near-infrared video reduces the effect of changing daylight~\cite{nowara2022}. Real-road driver ECG comes from the driver-stress study of Healey and Picard~\cite{healey2005}, and eye closure is commonly measured with the eye aspect ratio~\cite{soukupova2016}.
-
-Seizure detection outside hospitals relies mostly on wearables: a wrist accelerometer detected 35 of 39 generalized tonic-clonic seizures with 0.2 false alarms per day~\cite{beniczky2013}, and an under-mattress movement sensor detected 16 of 23 convulsive seizures and none of 197 non-convulsive ones~\cite{nouboue2023}. Clonic discharges last about 0.2\,s with silent periods of exponentially increasing duration~\cite{conradsen2013}, and heart rate rises during most seizures~\cite{eggleston2014}; none of these studies measures motion through a vehicle seat.
+Camera-based pulse measurement projects the skin colour signal onto a plane orthogonal to the skin tone (POS)~\cite{wang2017pos}. Outside hospitals, seizures are detected by movement sensors: an under-mattress sensor detected 16 of 23 convulsive seizures and none of 197 non-convulsive ones~\cite{nouboue2023}. Clonic discharges last about 0.2\,s with silent periods of exponentially increasing duration~\cite{conradsen2013}, and heart rate rises during most seizures~\cite{eggleston2014}; none of these studies measures motion through a vehicle seat.
 
 On the vehicle side, UN Regulation No.~157 defines a minimum risk manoeuvre that an automated lane keeping system performs when a transition demand is not answered~\cite{unece157}. In-vehicle networks without authentication let a compromised node command brakes~\cite{koscher2010}, cameras can be blinded with commodity lasers~\cite{petit2015}, and AUTOSAR secure onboard communication (SecOC) adds truncated message authentication codes and freshness values to CAN frames~\cite{autosar_secoc}.
 
@@ -163,24 +161,24 @@ The protected assets are the vehicle actuators, the driver's physiological data,
 \label{tab:threats}
 \centering
 \footnotesize
-\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.15cm}>{\raggedright\arraybackslash}p{3.35cm}>{\raggedright\arraybackslash}p{2.1cm}@{}}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{3.4cm}>{\raggedright\arraybackslash}p{2.0cm}@{}}
 \toprule
 Threat & Control & Test case \\
 \midrule
-Forged command & 24-bit AES-CMAC, SecOC profile 1 & unauthorized key \\
-Replayed command & 64-bit freshness counter, 8 bits sent & replayed frames \\
+Forged command & 24-bit AES-CMAC, SecOC & unauthorized key \\
+Replayed command & 64-bit freshness, 8 bits sent & replayed frames \\
 Tampered frame & MAC check, alive timeout & tampered frames \\
-Valid MAC, unsafe value & phase order, $-4$\,m/s$^2$ limit & implausible command \\
-Camera blinding or spoofing & cross-sensor interlock, two-sensor rule & optical blinding \\
-Sensor loss or stale data & freshness, degraded modes & IMU, seat stale \\
+Valid MAC, unsafe value & phase order, $-4$\,m/s$^2$ limit & implausible \\
+Camera blinding & interlock, two-sensor rule & optical blinding \\
+Lost or stale sensor & freshness, degraded modes & IMU, seat stale \\
 ECU hang & fail-silent host, gateway stop & two hang cases \\
 Network outage & retry, SMS fallback, queue & two bearer cases \\
-Message forgery, eavesdropping & ECDSA P-256 signature, ECIES to PSAP & unit tests \\
+Forged or read MEC & ECDSA P-256, ECIES & unit tests \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The 0x120 command follows SecOC profile 1, AES-128-CMAC~\cite{nist80038b} truncated to 24 bits over the data identifier, payload and a 64-bit freshness value of which the low 8 bits are sent~\cite{autosar_secoc}. Its payload, the CAN database file and the decoder are tested to agree bit for bit. The status frame that other nodes can read carries sensor health only, never a biometric value.
+The 0x120 command follows SecOC profile 1, AES-128-CMAC~\cite{nist80038b} truncated to 24 bits over the data identifier, payload and a 64-bit freshness value of which the low 8 bits are sent~\cite{autosar_secoc}. The status frame that other nodes can read carries sensor health only, never a biometric value.
 
 The 76-byte medical extension container (MEC) has a 12-byte header with etiology, confidence, latency, heart rate and sequence number, and a 64-byte ECDSA P-256 signature from a pseudonymous key, the curve and signature used by ITS security certificates~\cite{etsi103097}. It is encrypted to the emergency centre's public key with ephemeral ECDH, HKDF and AES-GCM and travels beside the eCall, not inside its 140-byte minimum set of data~\cite{en15722}, which already carries the location. Nearby vehicles receive a decentralized environmental notification with cause code 93, human problem, and sub-cause 0, unavailable~\cite{etsi102894}, so the etiology never leaves the emergency channel. The system stores no video and no waveform; only 10\,s feature buffers exist, in memory.
 
@@ -208,12 +206,12 @@ UCI HAR~\cite{anguita2013} & waist, 30 adults & test only \\
 \end{tabular}
 \end{table}
 
-The cardiac branch is validated leaving one of \NcardRecords\ records out. The motion branch is trained on recorded motion only: motor seizures recorded with a neck accelerometer during video-EEG monitoring~\cite{bhagubai2025} and volunteers' seizure mimics~\cite{villar2016}, against patient background more than 10\,min from any seizure, the volunteers' other activities, driving, walking and stairs~\cite{karas2021}, and everyday activities~\cite{banos2014}. Seizure windows are positives only when their motion exceeds twice the pre-ictal level and the median hip RMS of the training drivers, as weaker motion is lost in road vibration; this labelling took three held-out runs, the earlier ones having taught the branch to flag stillness. Sample weights balance the classes and sources. People are held out in five folds; the mimics are scored on their test split, which shares its six volunteers with training; \cite{anguita2013} is never trained on. No recording measures seizure motion in a seat, so a jerk train with the clonic dynamics of~\cite{conradsen2013}, 0.2\,s discharges with silent periods growing from 0.05--0.15\,s to about 1\,s over 40 jerks, is added to held-out hip driving at 0.05--0.5\,g, for testing only.
+The cardiac branch is validated leaving one of \NcardRecords\ records out. The motion branch is trained on recorded motion only: motor seizures recorded with a neck accelerometer during video-EEG monitoring~\cite{bhagubai2025} and volunteers' seizure mimics~\cite{villar2016}, against patient background more than 10\,min from any seizure, the volunteers' other activities, driving, walking and stairs~\cite{karas2021}, and everyday activities~\cite{banos2014}. Seizure windows are positives only when their motion exceeds twice the pre-ictal level and the median hip RMS of the training drivers, as weaker motion is lost in road vibration; this labelling took three held-out runs, the earlier ones having taught the branch to flag stillness. People are held out in five folds; the mimics are scored on their test split, which shares its six volunteers with training; \cite{anguita2013} is never trained on. No recording measures seizure motion in a seat, so a jerk train with the clonic dynamics of~\cite{conradsen2013}, 0.2\,s discharges with silent periods growing from 0.05--0.15\,s to about 1\,s over 40 jerks, is added to held-out hip driving at 0.05--0.5\,g, for testing only.
 
 The fused detector is evaluated on composite episodes, which is the conditional-independence assumption of Equation~\eqref{eq:fusion} applied to the test data. A normal episode pairs a held-out drive with held-out driving accelerometry. A syncope episode takes one of \NSyncopeEp\ ventricular arrhythmia onsets after 30\,s of normal rhythm; loss of consciousness, driving the vision and posture channels, is assumed 6--12\,s later. A seizure episode takes each of the ten seizures and the neck motion of a motor seizure of a held-out patient from its onset, or, after a 5--15\,s tonic phase, the modelled jerk train at 0.1, 0.2 and 0.5\,g. Vision and posture channels are generated with everyday confounders: blinks, 1--3\,s glances down every 45\,s, forward leans every 120\,s and one-handed steering every 60\,s. Separately, the full software pipeline runs \FaultCases\ failure and attack cases with synthetic sensors, \FaultSeeds\ seeds each.
 
 \section{Results}
-Table~\ref{tab:branch} gives the branch results. The pulse rhythm separates ventricular arrhythmia well and seizures less well, as a clear heart-rate change accompanies only about 70\,\% of partial-onset seizures~\cite{eggleston2014}. The fixed rule $r>0.65$ fires \BaseSerDriveFA\ times per hour of real driving. On held-out patients the motion branch detected \MrSzConv\ convulsive seizures from \MrSzConvPatients\ patients but few other seizures, which a neck sensor barely registers. Alone it raised \MrDriveHipFA\ alarms per hour of held-out driving at the hip and \MrDriveWristFA\ at the wrist. Without the everyday activities in training, these rose to \MrNoMhDriveHipFA\ and \MrNoMhDriveWristFA, and cycling and running raised \MrNoMhCyclingAlarms\ and \MrNoMhRunningAlarms\ alarms instead of \MrCyclingAlarms\ and \MrRunningAlarms, for \MrNoMhSzConv\ convulsive seizures detected.
+Table~\ref{tab:branch} gives the branch results. The pulse rhythm separates ventricular arrhythmia well and seizures less well, as a clear heart-rate change accompanies only about 70\,\% of partial-onset seizures~\cite{eggleston2014}. The fixed rule $r>0.65$ fires \BaseSerDriveFA\ times per hour of real driving. On held-out patients the motion branch detected \MrSzConv\ convulsive seizures from \MrSzConvPatients\ patients but few other seizures, which a neck sensor barely registers. Alone it raised \MrDriveHipFA\ alarms per hour of held-out driving at the hip and \MrDriveWristFA\ at the wrist.
 
 \begin{table}[!t]
 \caption{Branch results under held-out records and held-out subjects}
@@ -240,7 +238,7 @@ Mimics; other recordings fired & \multicolumn{3}{c}{\MrEpiHit/\MrEpiN; \MrEpiOth
 \end{tabular}
 \end{table}
 
-The deployed cardiac model is the logistic one, the best by AUC. In Table~\ref{tab:fusion} only the cardiac and motion rows use real signals; vision and posture are generated from the densities that score them, so every row including them is optimistic. The cardiac branch alone raises \FaOnlyCard\ false starts per hour; adding the motion branch cuts this to \FaReal\ but cannot confirm syncope. All four branches started no manoeuvre in \FusionHours\ hours of real driving, which puts the 95\,\% upper bound of the rate at \FaFullUpper\ per hour, and detected \SyFull\ syncope and \SzFull\ clinical-motion seizure episodes, with 90th-percentile latencies of \PctSyFull\ and \PctSzFull\,s, \SzModFull\ with the modelled jerk train and \SzMimFull\ with recorded mimics. Without the IMU \SzNoImu\ clinical-motion episodes are detected: reading weak seizure motion as normal, the motion branch votes against camera and seat. Losing the camera confirms no syncope, by design.
+The deployed cardiac model is the logistic one, the best by AUC. In Table~\ref{tab:fusion} only the cardiac and motion rows use real signals; vision and posture are generated from the densities that score them, so every row including them is optimistic. All four branches started no manoeuvre in \FusionHours\ hours of real driving, which puts the 95\,\% upper bound of the rate at \FaFullUpper\ per hour, and detected \SyFull\ syncope and \SzFull\ clinical-motion seizure episodes, with 90th-percentile latencies of \PctSyFull\ and \PctSzFull\,s, \SzModFull\ with the modelled jerk train and \SzMimFull\ with recorded mimics. Without the IMU \SzNoImu\ clinical-motion episodes are detected: reading weak seizure motion as normal, the motion branch votes against camera and seat. Losing the camera confirms no syncope, by design.
 
 \begin{table}[!t]
 \caption{Fused detector on out-of-fold composite episodes}
@@ -263,10 +261,17 @@ IMU lost & \FaNoImu & \SyNoImu & \SzNoImu; \SzModNoImu & \LatSyNoImu, \LatSzNoIm
 \end{tabular}
 \end{table}
 
-The window $W$ was searched over 0, 2, 4 and 8\,s, with the median syncope latency growing from \SweepLatZero\ to \SweepLatEight\,s. In each of \WFolds\ episode folds, $W$ was chosen on the other folds as the shortest window with the highest syncope sensitivity; \ifnum\WAllSame=1 every fold chose \WChosen\,s, so the held-out results are those of Table~\ref{tab:fusion}.\else the folds chose \WChosen\,s, and the held-out full fusion gives \FaNested\ false manoeuvres per hour, syncope \SyNested\ and seizures \SzNested.\fi
+Searching $W$ over 0, 2, 4 and 8\,s raised the median syncope latency from \SweepLatZero\ to \SweepLatEight\,s. In each of \WFolds\ folds, $W$ was chosen on the other folds as the shortest with the highest syncope sensitivity; \ifnum\WAllSame=1 every fold chose \WChosen\,s, so the held-out results are those of Table~\ref{tab:fusion}.\else the folds chose \WChosen\,s, and the held-out full fusion gives \FaNested\ false manoeuvres per hour, syncope \SyNested\ and seizures \SzNested.\fi
 
 
-All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding, or tampered, replayed, forged or implausible commands; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. On one laptop core a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, within the 100\,ms deadline.
+All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding, or tampered, replayed, forged or implausible commands; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. On one laptop core a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, within the 100\,ms deadline. Figure~\ref{fig:dashboard} shows the prototype's live dashboard running this pipeline at 10\,Hz during a scripted seizure.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{figures/dashboard_detection.png}
+\caption{Detection panel of the prototype dashboard on synthetic signals.}
+\label{fig:dashboard}
+\end{figure}
 
 \section{Conclusion}
 Bounded evidence and two physical sensors made the detector sensitive and quiet on real driving, and the vehicle moves only on commands a fail-safe gateway authenticates. Three limits remain. The vision and posture likelihoods are expert-set and their channels modelled, so the fused results above are an upper estimate until those channels are measured; the motion branch learns seizure motion from patients lying in bed with a neck sensor, raises alarms during real driving on its own, and no recording yet measures seizure motion at a headrest; and the composite episodes assume that the branches are independent given the class. The code already runs on an ESP32 sensor node, a camera and a CAN bus, where Phase 2 will measure the eye, head and seat likelihoods, headrest seizure motion and pulse accuracy.
@@ -279,10 +284,6 @@ Bounded evidence and two physical sensors made the detector sensitive and quiet 
 \bibitem{lempert1994} T.~Lempert, M.~Bauer, and D.~Schmidt, ``Syncope: A videometric analysis of 56 episodes of transient cerebral hypoxia,'' \emph{Ann. Neurol.}, vol.~36, no.~2, pp.~233--237, 1994.
 \bibitem{kumar2022} A.~Kumar \emph{et al.}, ``Simulated driving in the epilepsy monitoring unit: Effects of seizure type, consciousness, and motor impairment,'' \emph{Epilepsia}, vol.~63, no.~1, pp.~e30--e34, 2022, doi: 10.1111/epi.17136.
 \bibitem{wang2017pos} W.~Wang, A.~C. den Brinker, S.~Stuijk, and G.~de Haan, ``Algorithmic principles of remote PPG,'' \emph{IEEE Trans. Biomed. Eng.}, vol.~64, no.~7, pp.~1479--1491, 2017.
-\bibitem{nowara2022} E.~M. Nowara, T.~K. Marks, H.~Mansour, and A.~Veeraraghavan, ``Near-infrared imaging photoplethysmography during driving,'' \emph{IEEE Trans. Intell. Transp. Syst.}, vol.~23, no.~4, pp.~3589--3600, 2022.
-\bibitem{healey2005} J.~A. Healey and R.~W. Picard, ``Detecting stress during real-world driving tasks using physiological sensors,'' \emph{IEEE Trans. Intell. Transp. Syst.}, vol.~6, no.~2, pp.~156--166, 2005.
-\bibitem{soukupova2016} T.~Soukupov\'a and J.~\v{C}ech, ``Real-time eye blink detection using facial landmarks,'' in \emph{Proc. 21st Comput. Vis. Winter Workshop}, Rimske Toplice, 2016.
-\bibitem{beniczky2013} S.~Beniczky, T.~Polster, T.~W. Kjaer, and H.~Hjalgrim, ``Detection of generalized tonic-clonic seizures by a wireless wrist accelerometer: A prospective, multicenter study,'' \emph{Epilepsia}, vol.~54, no.~4, pp.~e58--e61, 2013.
 \bibitem{nouboue2023} C.~Nouboue, S.~Selfi, E.~Diab, S.~Chen, B.~P\'erin, and W.~Szurhaj, ``Assessment of an under-mattress sensor as a seizure detection tool in an adult epilepsy monitoring unit,'' \emph{Seizure}, vol.~105, pp.~17--21, 2023, doi: 10.1016/j.seizure.2023.01.005.
 \bibitem{conradsen2013} I.~Conradsen, M.~Moldovan, P.~Jennum, P.~Wolf, D.~Farina, and S.~Beniczky, ``Dynamics of muscle activation during tonic-clonic seizures,'' \emph{Epilepsy Res.}, vol.~104, no.~1--2, pp.~84--93, 2013.
 \bibitem{eggleston2014} K.~S. Eggleston, B.~D. Olin, and R.~S. Fisher, ``Ictal tachycardia: The head--heart connection,'' \emph{Seizure}, vol.~23, no.~7, pp.~496--505, 2014.
@@ -290,6 +291,7 @@ Bounded evidence and two physical sensors made the detector sensitive and quiet 
 \bibitem{koscher2010} K.~Koscher \emph{et al.}, ``Experimental security analysis of a modern automobile,'' in \emph{Proc. IEEE Symp. Security Privacy}, 2010, pp.~447--462.
 \bibitem{petit2015} J.~Petit, B.~Stottelaar, M.~Feiri, and F.~Kargl, ``Remote attacks on automated vehicles sensors: Experiments on camera and LiDAR,'' presented at \emph{Black Hat Europe}, 2015.
 \bibitem{autosar_secoc} AUTOSAR, ``Specification of secure onboard communication protocol,'' AUTOSAR FO PRS SecOcProtocol, R23-11, 2023.
+\bibitem{soukupova2016} T.~Soukupov\'a and J.~\v{C}ech, ``Real-time eye blink detection using facial landmarks,'' in \emph{Proc. 21st Comput. Vis. Winter Workshop}, Rimske Toplice, 2016.
 \bibitem{welch1967} P.~D. Welch, ``The use of fast Fourier transform for the estimation of power spectra,'' \emph{IEEE Trans. Audio Electroacoust.}, vol.~15, no.~2, pp.~70--73, 1967.
 \bibitem{friedman2001} J.~H. Friedman, ``Greedy function approximation: A gradient boosting machine,'' \emph{Ann. Statist.}, vol.~29, no.~5, pp.~1189--1232, 2001.
 \bibitem{ke2017} G.~Ke \emph{et al.}, ``LightGBM: A highly efficient gradient boosting decision tree,'' in \emph{Proc. Adv. Neural Inf. Process. Syst.}, vol.~30, 2017.
@@ -300,6 +302,7 @@ Bounded evidence and two physical sensors made the detector sensitive and quiet 
 \bibitem{en15722} CEN, ``Intelligent transport systems, eSafety, eCall minimum set of data,'' EN 15722:2020.
 \bibitem{etsi102894} ETSI, ``Intelligent transport systems (ITS); Users and applications requirements; Part 2: Applications and facilities layer common data dictionary,'' ETSI TS 102 894-2, V1.3.1, 2018.
 \bibitem{goldberger2000} A.~L. Goldberger \emph{et al.}, ``PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals,'' \emph{Circulation}, vol.~101, no.~23, pp.~e215--e220, 2000.
+\bibitem{healey2005} J.~A. Healey and R.~W. Picard, ``Detecting stress during real-world driving tasks using physiological sensors,'' \emph{IEEE Trans. Intell. Transp. Syst.}, vol.~6, no.~2, pp.~156--166, 2005.
 \bibitem{alaweel1999} I.~C. Al-Aweel \emph{et al.}, ``Post-ictal heart rate oscillations in partial epilepsy,'' \emph{Neurology}, vol.~53, no.~7, pp.~1590--1592, 1999.
 \bibitem{greenwald1986} S.~D. Greenwald, ``Development and analysis of a ventricular fibrillation detector,'' M.S. thesis, Dept. Elect. Eng. Comput. Sci., MIT, Cambridge, MA, USA, 1986.
 \bibitem{nolle1986} F.~M. Nolle, F.~K. Badura, J.~M. Catlett, R.~W. Bowser, and M.~H. Sketch, ``CREI-GARD, a new concept in computerized arrhythmia monitoring systems,'' \emph{Comput. Cardiol.}, vol.~13, pp.~515--518, 1986.
