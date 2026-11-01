@@ -1,7 +1,12 @@
 # 2. Proposed System Architecture
 
 Three physical sensors, one edge host, one authenticated command to the
-vehicle. Fig. 1 of the paper is the authoritative signal-flow diagram.
+vehicle.
+
+![CabinGuard-ADI architecture: sensing, features, bounded evidence, decision on the edge host, vehicle and emergency](figures/architecture.png)
+
+The diagram is Fig. 1 of the paper in colour: the same blocks, signals and arrows, drawn by `figures/architecture.tex`
+(`pdflatex architecture.tex`, then `pdftoppm -png -r 220 -singlefile architecture.pdf architecture`).
 
 ## Layers
 
@@ -41,7 +46,8 @@ No. 157, with design values of our own.
 | `System_Architecture_and_Hardware_Spec.md` | full architecture and hardware specification |
 | `hardware/README.md` | Phase 2 bench: bill of materials, wiring, bring-up, validation plan |
 | `hardware/esp32_sensor_node/esp32_sensor_node.ino` | ESP32 sensor-node firmware |
-| `figures/*.svg` | early concept diagrams (CAN/V2X frame structure, wiring, software pipeline); the paper's Fig. 1 supersedes them where they differ |
+| `figures/architecture.tex`, `.pdf`, `.png` | the architecture diagram above |
+| `figures/*.svg` | early concept diagrams (CAN/V2X frame structure, wiring, software pipeline); the architecture diagram supersedes them where they differ |
 
 Code: [`6_Proof_of_Concept_Prototype/prototype`](../6_Proof_of_Concept_Prototype/prototype)
 (`cabinguard/pipeline.py` wires the layers together; `cabinguard/hardware.py`
