@@ -35,3 +35,13 @@ include = ["cabinguard*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Third-party warnings only, matched by message so that anything new still shows:
+# joblib loading the saved models under NumPy >= 2.5, scikit-learn passing an
+# option SciPy no longer knows, and FastAPI's and Starlette's test client
+# recommending httpx2 and using a renamed anyio class.
+filterwarnings = [
+    "ignore:Setting the shape on a NumPy array has been deprecated",
+    "ignore:Unknown solver options",
+    "ignore:Using .httpx. with .starlette.testclient. is deprecated",
+    "ignore:The anyio.abc.BlockingPortal alias is deprecated",
+]
