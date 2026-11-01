@@ -33,12 +33,12 @@
   stage/.style={font=\footnotesize\bfseries, anchor=south},
   ]
   % ---------------------------------------------------------------- blocks (as in the paper)
-  \node[sen, minimum height=1.75cm] (cam) at (0,3.0) {\textbf{Camera}\\NIR, 30\,fps};
+  \node[sen, minimum height=1.75cm] (cam) at (0,3.0) {\textbf{Camera}\\850\,nm, 30\,fps};
   \node[sen] (imu) at (0,1.55) {\textbf{Headrest IMU}\\100\,Hz};
   \node[sen] (seat) at (0,0.5) {\textbf{Seat and wheel}\\FSR, touch, $\tau$};
-  \node[feat] (fc) at (3.0,3.45) {rPPG beats\\pulse rhythm $\mathbf{c}$};
+  \node[feat] (fc) at (3.0,3.45) {POS beats\\pulse rhythm $\mathbf{c}$};
   \node[feat] (fv) at (3.0,2.55) {landmarks\\$e$, $\theta$};
-  \node[feat] (fm) at (3.0,1.55) {Welch PSD\\motion $\mathbf{m}$};
+  \node[feat] (fm) at (3.0,1.55) {Welch spectra\\motion $\mathbf{m}$};
   \node[feat] (fp) at (3.0,0.5) {slump $\psi$\\grip $g$};
   \node[evid] (bc) at (5.9,3.45) {$\lambda_{\mathrm{card}}$, bound};
   \node[evid] (bv) at (5.9,2.55) {$\lambda_{\mathrm{vis}}$, bound};
@@ -53,7 +53,7 @@
   \node[veh] (gw) at (17.1,3.0) {\textbf{SecOC 0x120}\\gateway};
   \node[veh] (act) at (20.1,3.0) {brakes, hazards\\parking brake};
   \node[em] (tel) at (17.1,0.95) {\textbf{telematics}\\unit};
-  \node[em] (psap) at (20.1,1.45) {PSAP\\signed MEC};
+  \node[em] (psap) at (20.1,1.45) {emergency\\centre, MEC};
   \node[em] (v2x) at (20.1,0.45) {vehicles\\DENM};
 
   % ---------------------------------------------------------------- arrows (as in the paper)
