@@ -66,6 +66,10 @@ python experiments/fault_matrix.py --seeds 10
 
 ## Jury demo
 
+![Prototype dashboard during the minimum risk manoeuvre of a scripted seizure on synthetic signals](figures/dashboard_full.png)
+
+*The full dashboard during the scripted seizure run, on synthetic signals (every panel says where its data comes from): the vehicle braking and moving to the hard shoulder, the cabin signals, the detection evidence, the CAN frames with the gateway's verdicts (including forged frames rejected), and the sealed emergency message received at the emergency centre. Regenerate it with `python prototype/experiments/dashboard_figure.py`.*
+
 A local dashboard that runs the same ECU, gateway, SecOC, eCall and DENM code
 at 10 Hz on wall clock, with every input switchable between the scenario
 simulator and live hardware. It needs no GPU and no internet, and binds to

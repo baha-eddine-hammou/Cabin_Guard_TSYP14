@@ -19,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT.parent / "figures" / "dashboard_detection.png"
+OUT_FULL = ROOT.parent / "figures" / "dashboard_full.png"
 
 
 def free_port() -> int:
@@ -61,8 +62,13 @@ def main(executable: str | None = None) -> None:
             end = pg.locator("#corro").bounding_box()          # crop the panel's empty space under the last line
             pg.screenshot(path=str(OUT), clip={"x": box["x"], "y": box["y"], "width": box["width"],
                                                "height": end["y"] + end["height"] + 10 - box["y"]})
+            # the whole page during the manoeuvre: braking, moving to the shoulder, eCall and DENM sent
+            pg.wait_for_selector('.step.active[data-phase="PHASE_3_ACTIVE_MRM"]', timeout=60000)
+            pg.wait_for_function("() => document.getElementById('ecall').textContent.includes('V2X DENM')", timeout=30000)
+            pg.wait_for_timeout(2500)
+            pg.screenshot(path=str(OUT_FULL))
             b.close()
-        print("wrote", OUT)
+        print("wrote", OUT, "and", OUT_FULL)
     finally:
         demo.terminate()
         demo.wait(timeout=10)
