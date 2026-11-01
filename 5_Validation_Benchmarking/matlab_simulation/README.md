@@ -72,23 +72,54 @@ With `profile = 'github'` the timings follow the Python system: alert 12 s
 after onset (the median latency of `fusion_metrics.json`, not a result of this
 model), hazards 4 s later, braking at −3.2 m/s² 10 s after the alert, 100 km/h.
 
-## Results reported by the team (one scene, profile 'github')
+## Closed-loop test results
 
-From `RESULTS_github_profile.md`, produced by `cg_auto_suite('github')`; the
-result files themselves are written to `results/` when the suite is run and
-are not committed.
+Five tests run in the full Simulink model with the detailed plant
+(`cg_auto_suite('github')`): highway scene 1, 100 km/h, 45 s, incapacitation
+at 2 s, and the Python system's timings. [`TESTS.md`](TESTS.md) describes each
+test and what it proves; the raw numbers, one chain figure and one vehicle
+figure per test, and the overview are in
+[`results_final/suite_github/`](results_final/suite_github).
 
-- The chain timeline matches the Python system: alert at onset + 12 s, hazards
-  + 4 s, take-over + 10 s; the stop took 8.8 s over 123 m.
-- In a syncope run and in the cellular-down run, the scripted car behind
-  rear-ended the ego car at 0.7 m/s; it does not react to the ego car braking.
-  With a camera lost, the alert came 0.6 s later (degraded mode).
-- With a conscious driver, CabinGuard raised no alert.
-- With these timings the car has no driver control for about 22 s (about 600 m
-  at 100 km/h) before braking begins, and has no emergency braking of its own
-  in that interval.
+![All five test cases: speed, take-over time, emergency message delivery and gateway rejections](results_final/suite_github/suite_overview.png)
 
-One scene, so these are indications, not statistics.
+| # | Test | Injected | Alert | Hazards and eCall | Take-over | eCall delivered | Outcome |
+|---|---|---|---|---|---|---|---|
+| 1 | Syncope | syncope at 2 s | 14.0 s | 18.0 s | 24.0 s | 18.0 s | stopped in 8.8 s over 123 m; rear-end touch by the scripted follower at 30.5 s, 0.7 m/s |
+| 2 | Seizure | seizure at 2 s | 14.5 s | 18.5 s | 24.5 s | 18.5 s | stopped in 8.8 s over 123 m, no collision (smallest gap 0.11 m) |
+| 3 | Conscious driver | nothing | none | none | none | none | no alert and no take-over, as required |
+| 4 | Camera lost | camera fails at 2 s | 14.6 s | 18.6 s | 24.6 s | 18.6 s | degraded mode, +0.6 s, stopped, no collision |
+| 5 | Cellular down | cellular unavailable | 14.0 s | 18.0 s | 24.0 s | 26.0 s by SMS | stop unchanged; same follower touch as test 1 |
+
+Source: [`results_final/suite_github/suite_system.csv`](results_final/suite_github/suite_system.csv).
+The gateway rejected no frame in any test (no attack was injected here; the
+attack cases are in the Python fault matrix).
+
+**What the tests show.** The chain runs end to end in closed loop: the
+detector output is verified by the host, the alert, hazards and emergency call
+follow on the designed timeline (alert at onset + 12 s, hazards + 4 s,
+take-over + 10 s), the gateway accepts the braking command, and the car stops
+under control at −3.2 m/s². A conscious driver triggers nothing, a lost camera
+costs 0.6 s, and a cellular outage moves the emergency call to SMS without
+delaying the stop.
+
+![Syncope test: host state, gateway phase, take-over request and emergency call over time, with speed and acceleration command](results_final/suite_github/suite01_chain.png)
+
+**The two collision flags.** Tests 1 and 5 are flagged only because the
+scripted car behind, which does not react to the ego car, touches it at
+0.7 m/s after the take-over; at the take-over only 0.3 m/s² of braking was
+needed for anything ahead. In test 1 the right side was flagged as occupied,
+so the car braked in its lane rather than moving to the shoulder. The contact
+is reported, not tuned away. Test 3's contact with a slow car ahead at 33.6 s
+happens with no take-over, because the simulated conscious driver does not
+brake for traffic; the scene is marked invalid and not counted.
+
+**What follows from it.** With these timings the car keeps its speed without
+driver control for about 22 s (about 600 m at 100 km/h) before braking begins,
+and the model has no emergency braking of its own in that interval. Phase 2
+adds the real detector in the loop, reactive traffic, protection of that
+interval (emergency braking and a follower warning) and more scenes. One scene
+per test: the results are indications, not statistics.
 
 ## Limits
 

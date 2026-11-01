@@ -16,6 +16,7 @@ results exercise the software; they are not detection performance.
 | Smoothing window W | chosen per fold on the other folds; all five folds chose 2 s, so the held-out results equal the table above | as above | `results/fusion_metrics.json` (`w_selection`) |
 | Fault and attack matrix | 140 of 140 runs reached the required outcome (14 cases, 10 seeds) | synthetic sensors through the full software pipeline | `results/fault_matrix.json` |
 | Cycle time | median 5.8 ms, 99th percentile 11.0 ms, worst 81 ms, against a 100 ms deadline | synthetic run; the current file predates the host record, so re-run it on the target PC | `results/fault_matrix.json` |
+| Closed-loop Simulink tests (one highway scene, 100 km/h) | 5 tests: alert, hazards with eCall and take-over at onset + 12, 16 and 22 s; controlled stop in 8.8 s; no take-over with a conscious driver; camera lost +0.6 s; eCall by SMS when cellular is down | synthetic simulation, surrogate detector, scripted traffic | `matlab_simulation/results_final/suite_github/suite_system.csv` |
 
 All files are under `6_Proof_of_Concept_Prototype/prototype/`. The paper
 quotes these numbers through `1_IEEE_Research_Paper/paper_numbers.tex`, which
