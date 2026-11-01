@@ -1,0 +1,15 @@
+{
+  "sessions": 6,
+  "windows_1s": 5159,
+  "hours": 1.433,
+  "heart_rate_bpm": {
+    "mean": 71.84,
+    "min": 62.0,
+    "max": 220.0
+  },
+  "cardiac_branch_alone_confident_event_windows": {
+    "Syncope": 13
+  },
+  "cardiac_branch_alone_confident_event_fraction": 0.00252,
+  "scope": "real PhysDrive in-vehicle heart rate through the cardiac branch only; beats synthesised from the rate series; no seizure or syncope performance claim"
+}

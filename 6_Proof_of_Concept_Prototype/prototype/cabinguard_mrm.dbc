@@ -1,0 +1,72 @@
+VERSION "CabinGuard-ADI 0.2"
+
+NS_ :
+    NS_DESC_
+    CM_
+    BA_DEF_
+    BA_
+    VAL_
+    BA_DEF_DEF_
+
+BS_:
+
+BU_: CabinGuardECU VehicleGateway TelematicsUnit
+
+BO_ 288 MSG_CabinGuard_MRM_Cmd: 8 CabinGuardECU
+ SG_ MRM_Phase : 0|4@1+ (1,0) [0|4] "" VehicleGateway
+ SG_ MRM_Active : 4|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ HazardFlashers_Req : 5|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ EPB_Clamp_Req : 6|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ Doors_Unlock_Req : 7|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ Decel_Request : 8|8@1+ (0.05,-6.4) [-6.4|0] "m/s2" VehicleGateway
+ SG_ Detected_Etiology : 16|3@1+ (1,0) [0|7] "" VehicleGateway
+ SG_ Degraded_Level : 19|2@1+ (1,0) [0|3] "" VehicleGateway
+ SG_ Spoof_Interlock : 21|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ eCall_Req : 22|1@1+ (1,0) [0|1] "" VehicleGateway,TelematicsUnit
+ SG_ DENM_Req : 23|1@1+ (1,0) [0|1] "" VehicleGateway,TelematicsUnit
+ SG_ Confidence : 24|7@1+ (0.01,0) [0|1.27] "" VehicleGateway
+ SG_ Shoulder_Req : 31|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ SecOC_FV : 32|8@1+ (1,0) [0|255] "" VehicleGateway
+ SG_ SecOC_MAC : 40|24@1+ (1,0) [0|16777215] "" VehicleGateway
+
+BO_ 289 MSG_CabinGuard_Health: 8 CabinGuardECU
+ SG_ Camera_OK : 0|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ IMU_OK : 1|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ FSR_OK : 2|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ Grip_OK : 3|1@1+ (1,0) [0|1] "" VehicleGateway
+ SG_ Degraded_Level : 4|2@1+ (1,0) [0|3] "" VehicleGateway
+ SG_ Deadline_Overruns : 8|8@1+ (1,0) [0|255] "" VehicleGateway
+ SG_ Posterior_Entropy : 16|8@1+ (0.01,0) [0|1.58] "bit" VehicleGateway
+ SG_ SecOC_FV : 32|8@1+ (1,0) [0|255] "" VehicleGateway
+ SG_ SecOC_MAC : 40|24@1+ (1,0) [0|16777215] "" VehicleGateway
+
+BO_ 290 MSG_CabinGuard_Telematics_Status: 8 TelematicsUnit
+ SG_ DENM_CauseCode : 0|8@1+ (1,0) [0|255] "" VehicleGateway
+ SG_ DENM_SubCauseCode : 8|8@1+ (1,0) [0|255] "" VehicleGateway
+ SG_ MEC_State : 16|3@1+ (1,0) [0|7] "" VehicleGateway
+ SG_ MEC_Attempts : 19|5@1+ (1,0) [0|31] "" VehicleGateway
+ SG_ Bearer : 24|2@1+ (1,0) [0|3] "" VehicleGateway
+
+CM_ BU_ CabinGuardECU "Edge host running detection, watchdog and MRM state machine";
+CM_ BU_ VehicleGateway "Gateway and actuator arbitration: verifies SecOC, supervises the 0x120 alive timeout, applies command plausibility limits";
+CM_ BU_ TelematicsUnit "eCall and V2X unit: sends the signed MEC to the PSAP and the DENM to nearby vehicles";
+CM_ BO_ 288 "Cyclic 100 ms in every state, also the ECU alive signal. AUTOSAR SecOC profile 1 layout: 32-bit payload, 8-bit truncated freshness, 24-bit truncated AES-128-CMAC";
+CM_ BO_ 289 "Sensor health only. Carries no biometric value (no EAR, heart rate or pressure), so other bus nodes learn nothing about the driver";
+CM_ SG_ 288 MRM_Phase "0=Normal 1=PreAlert 2=Escalation 3=ActiveMRM 4=Standstill";
+CM_ SG_ 288 Detected_Etiology "0=None 1=Syncope 2=Seizure 7=Unknown";
+CM_ SG_ 288 Shoulder_Req "1 = move laterally to the hard shoulder; plausible only in phases 3 and 4";
+CM_ SG_ 288 Degraded_Level "0=Nominal 1=CameraLost 2=IMULost 3=Minimum (no autonomous MRM)";
+CM_ SG_ 290 DENM_CauseCode "ETSI TS 102 894-2 CauseCode, 93=humanProblem";
+CM_ SG_ 290 DENM_SubCauseCode "0=unavailable, used deliberately so the DENM does not disclose the etiology";
+CM_ SG_ 290 MEC_State "0=Idle 1=Sending 2=Acknowledged 3=Queued 4=Failed";
+CM_ SG_ 290 Bearer "0=None 1=Cellular eCall 2=SMS fallback";
+
+BA_DEF_ BO_ "GenMsgCycleTime" INT 0 10000;
+BA_DEF_DEF_ "GenMsgCycleTime" 100;
+BA_ "GenMsgCycleTime" BO_ 288 100;
+BA_ "GenMsgCycleTime" BO_ 289 100;
+BA_ "GenMsgCycleTime" BO_ 290 1000;
+
+VAL_ 288 MRM_Phase 0 "NORMAL" 1 "PRE_ALERT" 2 "ESCALATION" 3 "ACTIVE_MRM" 4 "STANDSTILL";
+VAL_ 288 Detected_Etiology 0 "None" 1 "Syncope" 2 "Seizure" 7 "Unknown";
+VAL_ 288 Degraded_Level 0 "Nominal" 1 "CameraLost" 2 "IMULost" 3 "Minimum";

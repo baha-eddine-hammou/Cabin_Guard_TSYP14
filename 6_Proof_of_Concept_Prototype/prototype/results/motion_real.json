@@ -1,0 +1,514 @@
+{
+  "scope": "trained on recorded motion only: SeizeIT2 motor seizures (neck accelerometer, patients) and UEA Epilepsy seizure mimics (wrist, volunteers) against SeizeIT2 background, Epilepsy other activities, PhysioNet walk-climb-drive and UCI MHEALTH; every window low-passed as at runtime",
+  "features": [
+    "ser",
+    "log_band_rms",
+    "peak_hz",
+    "log_total_rms",
+    "rhythmicity",
+    "peakiness"
+  ],
+  "persistence_windows": 4,
+  "gamma": 0.85,
+  "cross_validation": {
+    "accelerometry": {
+      "lh": {
+        "clapping": {
+          "alarms": 0,
+          "hours": 0.028194444444444446,
+          "alarms_per_hour": 0.0,
+          "window_rate": 0.04433497536945813
+        },
+        "driving": {
+          "alarms": 101,
+          "hours": 10.367777777777778,
+          "alarms_per_hour": 9.741721144571857,
+          "window_rate": 0.05745632836780624
+        },
+        "stairs_down": {
+          "alarms": 15,
+          "hours": 0.6502777777777777,
+          "alarms_per_hour": 23.06706535668518,
+          "window_rate": 0.03374626228107646
+        },
+        "stairs_up": {
+          "alarms": 14,
+          "hours": 0.68375,
+          "alarms_per_hour": 20.47531992687386,
+          "window_rate": 0.035750558602478166
+        },
+        "walking": {
+          "alarms": 0,
+          "hours": 4.302638888888889,
+          "alarms_per_hour": 0.0,
+          "window_rate": 0.001258917331095258
+        }
+      },
+      "lw": {
+        "clapping": {
+          "alarms": 1,
+          "hours": 0.028194444444444446,
+          "alarms_per_hour": 35.4679802955665,
+          "window_rate": 0.1330049261083744
+        },
+        "driving": {
+          "alarms": 71,
+          "hours": 10.367777777777778,
+          "alarms_per_hour": 6.848140606580216,
+          "window_rate": 0.04038956167613332
+        },
+        "stairs_down": {
+          "alarms": 11,
+          "hours": 0.6502777777777777,
+          "alarms_per_hour": 16.9158479282358,
+          "window_rate": 0.025630072618539085
+        },
+        "stairs_up": {
+          "alarms": 2,
+          "hours": 0.68375,
+          "alarms_per_hour": 2.9250457038391224,
+          "window_rate": 0.0075157424334755234
+        },
+        "walking": {
+          "alarms": 14,
+          "hours": 4.302638888888889,
+          "alarms_per_hour": 3.253817101907744,
+          "window_rate": 0.006972465218373737
+        }
+      }
+    },
+    "mhealth": {
+      "arm elevation": {
+        "alarms": 1,
+        "hours": 0.15861111111111112,
+        "alarms_per_hour": 6.304728546409807,
+        "window_rate": 0.04903677758318739
+      },
+      "climbing stairs": {
+        "alarms": 0,
+        "hours": 0.1625,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0008547008547008547
+      },
+      "cycling": {
+        "alarms": 1,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 6.050420168067227,
+        "window_rate": 0.03277310924369748
+      },
+      "jogging": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "jumping": {
+        "alarms": 0,
+        "hours": 0.052222222222222225,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.010638297872340425
+      },
+      "knee bends": {
+        "alarms": 0,
+        "hours": 0.15819444444444444,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0052677787532923615
+      },
+      "lying": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "running": {
+        "alarms": 4,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 24.201680672268907,
+        "window_rate": 0.03697478991596639
+      },
+      "sitting": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0033613445378151263
+      },
+      "standing": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0016806722689075631
+      },
+      "waist bends": {
+        "alarms": 0,
+        "hours": 0.1525,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "walking": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      }
+    },
+    "seizeit2": {
+      "automatisms": {
+        "seizures": 67,
+        "detected": 6,
+        "sensitivity": 0.08955223880597014,
+        "median_latency_s": 20.75,
+        "alarm_in_minute_before": 2,
+        "patients": 28
+      },
+      "background": {
+        "alarms": 1343,
+        "hours": 203.74319444444444,
+        "alarms_per_hour": 6.59163121331251,
+        "patients": 115
+      },
+      "convulsive": {
+        "seizures": 52,
+        "detected": 42,
+        "sensitivity": 0.8076923076923077,
+        "median_latency_s": 61.0,
+        "alarm_in_minute_before": 0,
+        "patients": 36
+      },
+      "hyperkinetic": {
+        "seizures": 270,
+        "detected": 40,
+        "sensitivity": 0.14814814814814814,
+        "median_latency_s": 38.75,
+        "alarm_in_minute_before": 20,
+        "patients": 30
+      },
+      "non-motor": {
+        "seizures": 283,
+        "detected": 10,
+        "sensitivity": 0.0353356890459364,
+        "median_latency_s": 36.5,
+        "alarm_in_minute_before": 9,
+        "patients": 45
+      },
+      "tonic or clonic": {
+        "seizures": 29,
+        "detected": 4,
+        "sensitivity": 0.13793103448275862,
+        "median_latency_s": 25.75,
+        "alarm_in_minute_before": 1,
+        "patients": 13
+      },
+      "unclassified": {
+        "seizures": 97,
+        "detected": 15,
+        "sensitivity": 0.15463917525773196,
+        "median_latency_s": 28.0,
+        "alarm_in_minute_before": 3,
+        "patients": 20
+      }
+    },
+    "injected_clonic_lh": {
+      "0.02": {
+        "episodes": 324,
+        "sensitivity": 0.07407407407407407,
+        "median_latency_s": 13.5
+      },
+      "0.05": {
+        "episodes": 324,
+        "sensitivity": 0.10185185185185185,
+        "median_latency_s": 4.0
+      },
+      "0.1": {
+        "episodes": 324,
+        "sensitivity": 0.5740740740740741,
+        "median_latency_s": 3.0
+      },
+      "0.2": {
+        "episodes": 324,
+        "sensitivity": 0.7901234567901234,
+        "median_latency_s": 2.5
+      },
+      "0.5": {
+        "episodes": 324,
+        "sensitivity": 0.7561728395061729,
+        "median_latency_s": 3.0
+      }
+    }
+  },
+  "cross_validation_without_mhealth": {
+    "accelerometry": {
+      "lh": {
+        "clapping": {
+          "alarms": 0,
+          "hours": 0.028194444444444446,
+          "alarms_per_hour": 0.0,
+          "window_rate": 0.04926108374384237
+        },
+        "driving": {
+          "alarms": 129,
+          "hours": 10.367777777777778,
+          "alarms_per_hour": 12.442396313364055,
+          "window_rate": 0.05804576144036009
+        },
+        "stairs_down": {
+          "alarms": 12,
+          "hours": 0.6502777777777777,
+          "alarms_per_hour": 18.45365228534814,
+          "window_rate": 0.04100811618966254
+        },
+        "stairs_up": {
+          "alarms": 15,
+          "hours": 0.68375,
+          "alarms_per_hour": 21.93784277879342,
+          "window_rate": 0.04042250660166565
+        },
+        "walking": {
+          "alarms": 0,
+          "hours": 4.302638888888889,
+          "alarms_per_hour": 0.0,
+          "window_rate": 0.001646276509893799
+        }
+      },
+      "lw": {
+        "clapping": {
+          "alarms": 1,
+          "hours": 0.028194444444444446,
+          "alarms_per_hour": 35.4679802955665,
+          "window_rate": 0.09359605911330049
+        },
+        "driving": {
+          "alarms": 99,
+          "hours": 10.367777777777778,
+          "alarms_per_hour": 9.548815775372415,
+          "window_rate": 0.04913728432108027
+        },
+        "stairs_down": {
+          "alarms": 10,
+          "hours": 0.6502777777777777,
+          "alarms_per_hour": 15.378043571123452,
+          "window_rate": 0.02285348141819735
+        },
+        "stairs_up": {
+          "alarms": 1,
+          "hours": 0.68375,
+          "alarms_per_hour": 1.4625228519195612,
+          "window_rate": 0.0069063579118423726
+        },
+        "walking": {
+          "alarms": 13,
+          "hours": 4.302638888888889,
+          "alarms_per_hour": 3.0214015946286197,
+          "window_rate": 0.00629458665547629
+        }
+      }
+    },
+    "mhealth": {
+      "arm elevation": {
+        "alarms": 18,
+        "hours": 0.15861111111111112,
+        "alarms_per_hour": 113.48511383537652,
+        "window_rate": 0.3274956217162872
+      },
+      "climbing stairs": {
+        "alarms": 0,
+        "hours": 0.1625,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "cycling": {
+        "alarms": 29,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 175.46218487394958,
+        "window_rate": 0.3092436974789916
+      },
+      "jogging": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "jumping": {
+        "alarms": 0,
+        "hours": 0.052222222222222225,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.010638297872340425
+      },
+      "knee bends": {
+        "alarms": 0,
+        "hours": 0.15819444444444444,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.03687445127304653
+      },
+      "lying": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0
+      },
+      "running": {
+        "alarms": 30,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 181.51260504201682,
+        "window_rate": 0.2823529411764706
+      },
+      "sitting": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0025210084033613447
+      },
+      "standing": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0016806722689075631
+      },
+      "waist bends": {
+        "alarms": 0,
+        "hours": 0.1525,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.037340619307832425
+      },
+      "walking": {
+        "alarms": 0,
+        "hours": 0.16527777777777777,
+        "alarms_per_hour": 0.0,
+        "window_rate": 0.0008403361344537816
+      }
+    },
+    "seizeit2": {
+      "automatisms": {
+        "seizures": 67,
+        "detected": 9,
+        "sensitivity": 0.13432835820895522,
+        "median_latency_s": 36.0,
+        "alarm_in_minute_before": 3,
+        "patients": 28
+      },
+      "background": {
+        "alarms": 1403,
+        "hours": 203.74319444444444,
+        "alarms_per_hour": 6.8861195772728605,
+        "patients": 115
+      },
+      "convulsive": {
+        "seizures": 52,
+        "detected": 41,
+        "sensitivity": 0.7884615384615384,
+        "median_latency_s": 62.0,
+        "alarm_in_minute_before": 0,
+        "patients": 36
+      },
+      "hyperkinetic": {
+        "seizures": 270,
+        "detected": 47,
+        "sensitivity": 0.17407407407407408,
+        "median_latency_s": 34.5,
+        "alarm_in_minute_before": 19,
+        "patients": 30
+      },
+      "non-motor": {
+        "seizures": 283,
+        "detected": 11,
+        "sensitivity": 0.038869257950530034,
+        "median_latency_s": 27.0,
+        "alarm_in_minute_before": 10,
+        "patients": 45
+      },
+      "tonic or clonic": {
+        "seizures": 29,
+        "detected": 4,
+        "sensitivity": 0.13793103448275862,
+        "median_latency_s": 18.0,
+        "alarm_in_minute_before": 1,
+        "patients": 13
+      },
+      "unclassified": {
+        "seizures": 97,
+        "detected": 18,
+        "sensitivity": 0.18556701030927836,
+        "median_latency_s": 28.25,
+        "alarm_in_minute_before": 3,
+        "patients": 20
+      }
+    },
+    "injected_clonic_lh": {
+      "0.02": {
+        "episodes": 324,
+        "sensitivity": 0.06481481481481481,
+        "median_latency_s": 11.5
+      },
+      "0.05": {
+        "episodes": 324,
+        "sensitivity": 0.1111111111111111,
+        "median_latency_s": 3.25
+      },
+      "0.1": {
+        "episodes": 324,
+        "sensitivity": 0.6388888888888888,
+        "median_latency_s": 3.0
+      },
+      "0.2": {
+        "episodes": 324,
+        "sensitivity": 0.9259259259259259,
+        "median_latency_s": 2.5
+      },
+      "0.5": {
+        "episodes": 324,
+        "sensitivity": 1.0,
+        "median_latency_s": 2.5
+      }
+    }
+  },
+  "epilepsy_test": {
+    "EPILEPSY": {
+      "series": 34,
+      "fired": 26
+    },
+    "RUNNING": {
+      "series": 37,
+      "fired": 0
+    },
+    "SAWING": {
+      "series": 30,
+      "fired": 6
+    },
+    "WALKING": {
+      "series": 37,
+      "fired": 0
+    }
+  },
+  "epilepsy_test_auc_series": 0.9751131221719457,
+  "har": {
+    "walking": {
+      "windows": 1722,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "upstairs": {
+      "windows": 1544,
+      "confident": 0,
+      "window_rate": 0.0
+    },
+    "downstairs": {
+      "windows": 1406,
+      "confident": 7,
+      "window_rate": 0.004978662873399715
+    },
+    "sitting": {
+      "windows": 1777,
+      "confident": 21,
+      "window_rate": 0.011817670230725942
+    },
+    "standing": {
+      "windows": 1906,
+      "confident": 23,
+      "window_rate": 0.012067156348373556
+    },
+    "lying": {
+      "windows": 1944,
+      "confident": 33,
+      "window_rate": 0.016975308641975308
+    }
+  }
+}

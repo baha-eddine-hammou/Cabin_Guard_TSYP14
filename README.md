@@ -1,86 +1,135 @@
-# CabinGuard-ADI submission package
+<h1 align="center">CabinGuard-ADI</h1>
 
-CabinGuard-ADI is a Phase 1 research prototype for multimodal detection of synthetic driver incapacitation scenarios and a modeled minimum-risk response.
+<p align="center">
+<b>In-cabin detection of acute driver incapacitation, connected to an authenticated minimum-risk manoeuvre and a privacy-preserving emergency call.</b><br>
+Cardiac syncope and convulsive seizure versus normal driving · IEEE VTS TSYP14 CabinGuard-ADI challenge
+</p>
 
-## Scope and evidence
+<p align="center">
+<img src="2_System_Architecture/figures/architecture.png" alt="CabinGuard-ADI architecture: camera, headrest IMU and seat sensors feed features and bounded evidence; fusion, watchdog and the MRM state machine run on the edge host; an authenticated CAN command goes to the gateway and actuators, and the telematics unit sends a signed message to the emergency centre and a DENM to nearby vehicles" width="100%">
+</p>
 
-The current evidence is software-only. Sensor streams are synthetic, the vehicle response is modeled in Python, and the CAN/MEC messages are prototype formats. The project does not claim clinical validation, real camera or IMU capture, CARLA/ROS2 validation, real wireless eCall or DENM transmission, production HSM/ECDSA, AUTOSAR SecOC, or certified ASIL compliance.
+<table align="center">
+<tr>
+<td align="center"><h3>0 in 22.2 h</h3>false manoeuvres on real driving<br><sub>public datasets, composite episodes</sub></td>
+<td align="center"><h3>79 / 80</h3>syncope episodes detected<br><sub>PhysioNet arrhythmia onsets; 1 episode triggered in the 30 s before its onset</sub></td>
+<td align="center"><h3>8 / 10</h3>seizures with clinical motion<br><sub>SeizeIT2 neck accelerometry</sub></td>
+<td align="center"><h3>140 / 140</h3>fault and attack runs passed<br><sub>synthetic sensors, full pipeline</sub></td>
+</tr>
+</table>
 
-## Environment
+<p align="center"><sub>Eye, head and seat channels are modelled in the composite episodes, so the fused numbers are an upper estimate until Phase 2 measures them. Every number names its evidence class; nothing synthetic is reported as clinical or vehicle performance.</sub></p>
 
-Use Python 3.12 or newer. Install the dependencies listed in `prototype/requirements.txt` in the selected environment.
+<p align="center">
+<a href="6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4"><b>Watch the 64-second demo</b></a> &nbsp;·&nbsp;
+<a href="1_IEEE_Research_Paper/IEEE_Research_Paper_CabinGuard.pdf"><b>Read the paper</b></a> &nbsp;·&nbsp;
+<a href="#quick-start"><b>Run it</b></a>
+</p>
 
-## Run the demonstration
+---
 
-From the `prototype` directory, run `python run_demo.py`. The demo exercises normal driving, syncope, seizure, optical blinding, and IMU-fault scenarios through the simulator, feature extractor, watchdog, safety controller, and prototype telematics layer.
+The repository is organised by deliverable, one folder each:
 
-## Run regression tests
+| # | Deliverable | Folder |
+|---|---|---|
+| 1 | IEEE-style research paper (max. 5 pages) | [`1_IEEE_Research_Paper`](1_IEEE_Research_Paper) |
+| 2 | Proposed system architecture | [`2_System_Architecture`](2_System_Architecture) |
+| 3 | Detection and AI methodology | [`3_Detection_AI_Methodology`](3_Detection_AI_Methodology) |
+| 4 | Security and threat model | [`4_Security_Threat_Model`](4_Security_Threat_Model) |
+| 5 | Preliminary validation and benchmarking | [`5_Validation_Benchmarking`](5_Validation_Benchmarking) |
+| 6 | Proof-of-concept prototype | [`6_Proof_of_Concept_Prototype`](6_Proof_of_Concept_Prototype) |
 
-Run `python test_cabinguard.py` from `prototype`. The suite covers configuration, RFC 4493 CMAC vectors, synthetic classification, degraded modes, spoof suppression, prototype CAN integrity, replay rejection, unauthorized-key rejection, and class separation.
+The code lives once, in the prototype folder; the other folders document their
+part and point to the modules, scripts and result files behind it.
 
-## Reproduce the benchmark
+## 1. IEEE-Style Research Paper
 
-Run `python evaluate_50_trials.py` from `prototype`. It uses ten deterministic seeds for each of five synthetic scenarios and writes `results/benchmark_50_trials.csv` and `results/benchmark_metrics.json`. Use `--seeds N` to change the number of seeds. The output includes a confusion matrix, per-class precision/recall/F1, latency statistics, false-positive and false-negative counts, safe-failure counts, MEC lengths, and prototype CAN verification results.
+<img src="1_IEEE_Research_Paper/figures/paper_page1.png" alt="First page of the paper" width="260" align="right">
 
-## Replay PhysDrive data
+[`1_IEEE_Research_Paper`](1_IEEE_Research_Paper): the five-page Phase 1 paper
+(`IEEEtran`, conference), its PDF, and the macro files that carry every number
+it quotes. Those files are generated from the committed results by
+`export_paper_numbers.py`; no number is typed by hand. The review copy is
+anonymous.
 
-PhysDrive is an external academic dataset. The official repository is at
-`https://github.com/WJULYW/PhysDrive-Dataset`; its preprocessed version is also
-listed at `https://www.kaggle.com/datasets/xiaoyang274/physdrive`. Download the
-dataset separately and pass its root directory to `PhysDriveAdapter`:
+It covers the problem and requirements, the architecture, the detection
+method with its equations, safety and fault handling, the threat model, the
+evaluation on public datasets, and the results.
 
-```python
-from cabinguard.physdrive_adapter import PhysDriveAdapter
+<br clear="right">
 
-adapter = PhysDriveAdapter(r"D:\\datasets\\PhysDrive")
-for frame in adapter.iter_frames():
-	# Pass frame to FeatureExtractor, CrossSensorWatchdog, and the controller.
-	print(frame.timestamp, frame.rppg_hr_bpm, frame.imu_heartbeat_ok)
+## 2. Proposed System Architecture
+
+[`2_System_Architecture`](2_System_Architecture): three physical sensors (an
+850 nm steering-column camera, a headrest accelerometer, seat and wheel sensors
+on an ESP32 node), an edge host that runs detection, the watchdog and the
+minimum-risk manoeuvre (MRM) state machine, and a gateway that owns the
+actuators and accepts only one authenticated CAN command (the diagram at the
+top). Includes the hardware and architecture specification, the ESP32
+firmware, the bill of materials and the wiring.
+
+## 3. Detection & AI Methodology
+
+[`3_Detection_AI_Methodology`](3_Detection_AI_Methodology): four evidence
+branches (pulse rhythm, eyes and head, headrest motion, seat and wheel), a
+logistic-regression cardiac model and a gradient-boosted motion model trained
+on public recordings, and bounded-evidence fusion in which no single sensor can
+start a manoeuvre: a manoeuvre needs two agreeing physical sensors for 2 s.
+
+<p align="center">
+<img src="3_Detection_AI_Methodology/figures/fusion_bound.png" alt="Posterior of an event against the evidence bound: one branch at its bound stays below the decision threshold, two agreeing branches exceed it" width="75%">
+</p>
+
+## 4. Security & Threat Model
+
+[`4_Security_Threat_Model`](4_Security_Threat_Model): assets, attackers and
+controls. AUTOSAR SecOC profile 1 (24-bit AES-CMAC, freshness value) on the
+command frame, a gateway plausibility gate and alive supervision, a signed
+(ECDSA P-256) and encrypted (ECIES) medical message for the emergency centre
+only, a V2X warning that never carries the diagnosis, and the residual risks
+stated plainly.
+
+<p align="center">
+<img src="4_Security_Threat_Model/figures/trust_boundaries.png" alt="Trust boundaries: the cabin and edge host, the untrusted CAN bus, cellular and radio channels, and the gateway as the trusted boundary in front of the actuators" width="90%">
+</p>
+
+## 5. Preliminary Validation / Benchmarking
+
+[`5_Validation_Benchmarking`](5_Validation_Benchmarking): held-out evaluation
+on public datasets (PhysioNet, SeizeIT2, UEA Epilepsy, UCI MHEALTH and HAR),
+fused results on composite episodes, a 14-case fault and attack matrix through
+the full software pipeline, cycle timing, and a closed-loop MATLAB/Simulink
+vehicle simulation. Includes the commands that reproduce every result.
+
+<p align="center">
+<img src="5_Validation_Benchmarking/figures/fused_detector.png" alt="Fused detector per configuration: false manoeuvres per hour, syncope and clinical-motion seizure detection" width="100%">
+</p>
+
+<p align="center">
+<img src="5_Validation_Benchmarking/figures/fault_matrix.png" alt="Fault and attack matrix: 14 cases, 140 of 140 runs reached the required outcome" width="49%">
+<img src="5_Validation_Benchmarking/matlab_simulation/figures/simulink_top_level.png" alt="Top level of the closed-loop Simulink model" width="49%">
+</p>
+
+## 6. Proof-of-Concept Prototype
+
+[`6_Proof_of_Concept_Prototype`](6_Proof_of_Concept_Prototype): the Python
+package that implements everything above, its tests, the 10 Hz real-time loop,
+the CAN gateway, and a live jury dashboard that runs the same code with
+synthetic, webcam or ESP32 inputs. ▶ [Demo video](6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4)
+(64 s, scripted syncope run on synthetic signals).
+
+<p align="center">
+<img src="6_Proof_of_Concept_Prototype/figures/dashboard_full.png" alt="Prototype dashboard during the minimum risk manoeuvre of a scripted seizure on synthetic signals" width="100%">
+</p>
+
+## Quick start
+
+Python 3.11 or newer, from the repository root:
+
 ```
-
-The adapter searches recursively for `Recording_Physiological_Data.csv` and
-replays its timestamp and heart-rate columns. It also discovers `HR.mat`-only
-sessions, as found in some PhysDrive Kaggle releases. PhysDrive does not contain CabinGuard seatback FSR, steering
-grip, or headrest IMU channels, so those fields are explicitly unavailable or
-neutral. This adapter validates real PhysDrive heart-rate replay through the
-adapter, feature extractor, and degraded-mode watchdog. Because the missing
-modalities are imputed, degraded classifier outputs are diagnostic only and
-do not establish seizure or syncope classification performance.
-
-## Real-dataset adapters
-
-The first multi-dataset milestone adds provenance-aware windows through
-`cabinguard.dataset_types`:
-
-- `MHealthAdapter` reads UCI MHEALTH 50 Hz logs with chest ECG, inertial
-	channels, activity labels, and subject identity.
-- `UciHarAdapter` reads UCI HAR inertial windows, activity labels, and
-	subject-disjoint metadata.
-- `PhysDriveAdapter` reads PhysDrive CSV or `HR.mat` physiological sessions.
-- `MitBihAdapter` reads MIT-BIH ECG records and preserves WFDB beat annotations.
-
-Official sources:
-
-- UCI MHEALTH: `https://archive.ics.uci.edu/dataset/319/mhealth+dataset`
-- UCI HAR: `https://archive.ics.uci.edu/dataset/240/human+activity+recognition+using+smartphones`
-- PhysDrive: `https://github.com/WJULYW/PhysDrive-Dataset`
-- MIT-BIH Arrhythmia: `https://physionet.org/content/mitdb/1.0.0/`
-
-For Colab, upload `prototype.zip` and run `colab_uci_real_datasets.py`. The
-runner downloads the official MHEALTH and UCI HAR archives, parses them with
-the adapters, and writes `uci_real_dataset_report.json`. Its metrics are
-dataset-native ingestion/activity statistics, not medical-event performance.
-
-These datasets validate inertial, ECG, activity, and provenance handling. They
-do not provide driver syncope or seizure labels and must not be scored as the
-current `Normal`/`Syncope`/`Seizure` medical classifier.
-
-For MIT-BIH, install the optional `wfdb` dependency and run
-`colab_mitbih_replay.py` in Colab. The runner streams records `100` and `101`
-from PhysioNet, reports ECG windows and beat-annotation symbols, and writes
-`mitbih_real_pipeline_report.json`. MIT-BIH results validate ECG and
-arrhythmia preprocessing only; arrhythmia is not syncope.
-
-## Submission limitations
-
-The benchmark is not a clinical study and should not be interpreted as sensitivity, specificity, or regulatory evidence. Thresholds are literature-informed engineering assumptions. The target architecture still requires real-sensor validation, approved vehicle or simulator integration, security-key provisioning, production message security, privacy/legal review, and safety-case development.
+pip install -e "6_Proof_of_Concept_Prototype/prototype[dev,demo]"
+cd 6_Proof_of_Concept_Prototype/prototype
+python -m pytest -q                 # features, fusion rules, pipeline, faults, CAN, crypto, demo
+python run_demo.py --scenario seizure
+python run_jury_demo.py             # live dashboard on http://127.0.0.1:8765
+```
