@@ -12,7 +12,7 @@ Cardiac syncope and convulsive seizure versus normal driving · IEEE VTS TSYP14 
 <table align="center">
 <tr>
 <td align="center"><h3>0 in 22.2 h</h3>false manoeuvres on real driving<br><sub>public datasets, composite episodes</sub></td>
-<td align="center"><h3>79 / 80</h3>syncope episodes detected<br><sub>PhysioNet arrhythmia onsets</sub></td>
+<td align="center"><h3>79 / 80</h3>syncope episodes detected<br><sub>PhysioNet arrhythmia onsets; 1 episode triggered in the 30 s before its onset</sub></td>
 <td align="center"><h3>8 / 10</h3>seizures with clinical motion<br><sub>SeizeIT2 neck accelerometry</sub></td>
 <td align="center"><h3>140 / 140</h3>fault and attack runs passed<br><sub>synthetic sensors, full pipeline</sub></td>
 </tr>
