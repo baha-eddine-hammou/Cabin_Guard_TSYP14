@@ -87,6 +87,7 @@ def main() -> None:
     if sum(full["false_by_class"].values()) == 0:
         macros["FaFullUpper"] = fmt(3.0 / full["driving_hours"], 2)
     macros["NSyncopeEp"] = str(full["events"]["Syncope"]["n"])
+    macros["SyPreFull"] = str(full["events"]["Syncope"]["pre_onset_false"])   # triggers before the arrhythmia onset
     macros["PctSyFull"] = fmt(full["events"]["Syncope"]["p90_latency_s"], 1)
     macros["PctSzFull"] = fmt(full["events"].get("Seizure@clinical", full["events"]["Seizure@mimic"])["p90_latency_s"], 1)
     for amp, tag in (("0.1", "Ten"), ("0.2", "Twenty"), ("0.5", "Fifty")):

@@ -211,7 +211,7 @@ The cardiac branch is validated leaving one of \NcardRecords\ records out. The m
 The fused detector is evaluated on composite episodes, which is the conditional-independence assumption of Equation~\eqref{eq:fusion} applied to the test data. A normal episode pairs a held-out drive with held-out driving accelerometry. A syncope episode takes one of \NSyncopeEp\ ventricular arrhythmia onsets after 30\,s of normal rhythm; loss of consciousness, driving the vision and posture channels, is assumed 6--12\,s later. A seizure episode takes each of the ten seizures and the neck motion of a motor seizure of a held-out patient from its onset, or, after a 5--15\,s tonic phase, the modelled jerk train at 0.1, 0.2 and 0.5\,g. Vision and posture channels are generated with everyday confounders: blinks, 1--3\,s glances down every 45\,s, forward leans every 120\,s and one-handed steering every 60\,s. Separately, the full software pipeline runs \FaultCases\ failure and attack cases with synthetic sensors, \FaultSeeds\ seeds each.
 
 \section{Results}
-Table~\ref{tab:branch} gives the branch results. The pulse rhythm separates ventricular arrhythmia well and seizures less well, as a clear heart-rate change accompanies only about 70\,\% of partial-onset seizures~\cite{eggleston2014}. The fixed rule $r>0.65$ fires \BaseSerDriveFA\ times per hour of real driving. On held-out patients the motion branch detected \MrSzConv\ convulsive seizures from \MrSzConvPatients\ patients but few other seizures, which a neck sensor barely registers. Alone it raised \MrDriveHipFA\ alarms per hour of held-out driving at the hip and \MrDriveWristFA\ at the wrist.
+In Table~\ref{tab:branch}, the pulse rhythm separates ventricular arrhythmia well and seizures less well, as a clear heart-rate change accompanies only about 70\,\% of partial-onset seizures~\cite{eggleston2014}. The fixed rule $r>0.65$ fires \BaseSerDriveFA\ times per hour of real driving. On held-out patients the motion branch detected \MrSzConv\ convulsive seizures from \MrSzConvPatients\ patients but few other seizures, which a neck sensor barely registers. Alone it raised \MrDriveHipFA\ alarms per hour of held-out driving at the hip and \MrDriveWristFA\ at the wrist.
 
 \begin{table}[!t]
 \caption{Branch results under held-out records and held-out subjects}
@@ -238,7 +238,7 @@ Mimics; other recordings fired & \multicolumn{3}{c}{\MrEpiHit/\MrEpiN; \MrEpiOth
 \end{tabular}
 \end{table}
 
-The deployed cardiac model is the logistic one, the best by area under the curve (AUC). In Table~\ref{tab:fusion} only the cardiac and motion rows use real signals; vision and posture are generated from the densities that score them, so every row including them is optimistic. All four branches started no manoeuvre in \FusionHours\ hours of real driving, which puts the 95\,\% upper bound of the rate at \FaFullUpper\ per hour, and detected \SyFull\ syncope and \SzFull\ clinical-motion seizure episodes, with 90th-percentile latencies of \PctSyFull\ and \PctSzFull\,s, \SzModFull\ with the modelled jerk train and \SzMimFull\ with recorded mimics. Without the IMU \SzNoImu\ clinical-motion episodes are detected; with it, the motion branch reads weak seizure motion as normal and votes against camera and seat. Losing the camera confirms no syncope, by design.
+The deployed cardiac model is the logistic one, the best by area under the curve (AUC). In Table~\ref{tab:fusion} only the cardiac and motion rows use real signals; vision and posture are generated from the densities that score them, so every row including them is optimistic. All four branches started no manoeuvre in \FusionHours\ hours of real driving, which puts the 95\,\% upper bound of the rate at \FaFullUpper\ per hour, and detected \SyFull\ syncope and \SzFull\ clinical-motion seizure episodes, with 90th-percentile latencies of \PctSyFull\ and \PctSzFull\,s, \SzModFull\ with the modelled jerk train and \SzMimFull\ with recorded mimics. In \SyPreFull\ syncope episode it also triggered in the 30\,s before the onset. Without the IMU \SzNoImu\ clinical-motion episodes are detected; with it, the motion branch reads weak seizure motion as normal and votes against camera and seat. Losing the camera confirms no syncope, by design.
 
 \begin{table}[!t]
 \caption{Fused detector on out-of-fold composite episodes}
@@ -261,14 +261,14 @@ IMU lost & \FaNoImu & \SyNoImu & \SzNoImu; \SzModNoImu & \LatSyNoImu, \LatSzNoIm
 \end{tabular}
 \end{table}
 
-Searching $W$ over 0, 2, 4 and 8\,s raised the median syncope latency from \SweepLatZero\ to \SweepLatEight\,s. In each of \WFolds\ folds, $W$ was chosen on the other folds as the shortest with the highest syncope sensitivity; \ifnum\WAllSame=1 every fold chose \WChosen\,s, so the held-out results are those of Table~\ref{tab:fusion}.\else the folds chose \WChosen\,s, and the held-out full fusion gives \FaNested\ false manoeuvres per hour, syncope \SyNested\ and seizures \SzNested.\fi
+Searching $W$ over 0, 2, 4 and 8\,s raised the median syncope latency from \SweepLatZero\ to \SweepLatEight\,s. Each of \WFolds\ folds chose $W$ on the others as the shortest with the highest syncope sensitivity; \ifnum\WAllSame=1 all chose \WChosen\,s, so the held-out results are those of Table~\ref{tab:fusion}.\else they chose \WChosen\,s, and the held-out full fusion gives \FaNested\ false manoeuvres per hour, syncope \SyNested\ and seizures \SzNested.\fi
 
 
 All \FaultPassed\ of \FaultRuns\ fault-matrix runs reached the required outcome: no manoeuvre under sensor loss, stale data, blinding or any of the rejected commands of Table~\ref{tab:threats}; a fail-silent gateway when the host hangs while driving and a completed stop when it hangs during a manoeuvre; and a verified MEC after cellular loss or a 60\,s loss of every bearer. In these runs a detection cycle took \CycleMedian\,ms at the median, \CycleP\,ms at the 99th percentile and \CycleMax\,ms at worst, within the 100\,ms deadline. Figure~\ref{fig:dashboard} shows the prototype dashboard running the pipeline at 10\,Hz in a scripted seizure; the repository has the full page.
 
 \begin{figure}[!t]
 \centering
-\includegraphics[width=\columnwidth]{figures/dashboard_detection.png}
+\includegraphics[width=0.93\columnwidth]{figures/dashboard_detection.png}
 \caption{Detection panel of the prototype dashboard on synthetic signals.}
 \label{fig:dashboard}
 \end{figure}
