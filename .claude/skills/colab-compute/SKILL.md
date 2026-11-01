@@ -1,13 +1,13 @@
 ---
 name: colab-compute
-description: Required whenever work on this repository would train a model, run an evaluation or experiment script, extract features from a dataset, or download a dataset. Heavy compute never runs in the Claude cloud session (it spends the user's session credits); it runs in the user's Google Colab notebook. Use before running anything under prototype/experiments/, any training, any data download, or any job longer than about two minutes.
+description: Required whenever work on this repository would train a model, run an evaluation or experiment script, extract features from a dataset, or download a dataset. Heavy compute never runs in the Claude cloud session (it spends the user's session credits); it runs in the user's Google Colab notebook. Use before running anything under 6_Proof_of_Concept_Prototype/prototype/experiments/, any training, any data download, or any job longer than about two minutes.
 ---
 
 # Heavy compute runs in Google Colab, never in the Claude session
 
 The user pays for the cloud session's compute. Training, evaluation and data
 work run in their Google Colab notebook,
-`prototype/experiments/colab/CabinGuard_Colab.ipynb`, not here. This is a
+`6_Proof_of_Concept_Prototype/prototype/experiments/colab/CabinGuard_Colab.ipynb`, not here. This is a
 standing requirement, not a preference to weigh.
 
 ## Never run in the Claude session
@@ -25,7 +25,7 @@ If such a job is already running when this applies, stop it.
 ## Allowed in the Claude session
 
 - Reading and editing code, the paper, the notebook and docs.
-- `python -m pytest prototype/tests` (fixture data only), the manuscript checker,
+- `python -m pytest 6_Proof_of_Concept_Prototype/prototype/tests` (fixture data only), the manuscript checker,
   and building the PDF.
 - Reading a few kilobytes from a remote source to design a loader: an HTTP
   header, a directory listing, one small annotation file.
@@ -35,7 +35,7 @@ If such a job is already running when this applies, stop it.
 ## The user's PC
 
 Since October 2026 the user runs these jobs on their own PC, from the
-repository root, with the same scripts the notebook calls (`cd prototype`,
+repository root, with the same scripts the notebook calls (`cd 6_Proof_of_Concept_Prototype/prototype`,
 then `python experiments/...`). Give them the exact commands in order, which
 outputs to commit, and what to attach if they prefer; the Colab notebook stays
 as the fallback and must keep working.
@@ -54,4 +54,4 @@ as the fallback and must keep working.
    count, rendered tables).
 
 Never quote a number in the paper that was not produced by a run on the user's
-machine (PC or Colab) and committed to `prototype/results/`.
+machine (PC or Colab) and committed to `6_Proof_of_Concept_Prototype/prototype/results/`.

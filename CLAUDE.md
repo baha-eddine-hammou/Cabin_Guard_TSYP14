@@ -5,7 +5,7 @@ for the TSYP14 CabinGuard-ADI challenge. The challenge spec book sets the page
 limits and the section list; IEEE editorial style sets the mechanics; the house
 rules below sit on top of both and win wherever IEEE leaves a choice open.
 
-Run `python tools/check_manuscript.py IEEE_Research_Paper_CabinGuard.tex` after
+Run `python tools/check_manuscript.py 1_IEEE_Research_Paper/IEEE_Research_Paper_CabinGuard.tex` after
 every edit. It checks the mechanical rules; the rest are listed under "What the
 checker cannot see".
 
@@ -112,7 +112,7 @@ say in the hand-back that you did:
   approached, find the script that could measure it, run it, and put the
   measured worst case in the sentence.
 - **Every number in the Results section** must be produced by a script in
-  `prototype/` whose output file is committed. Re-run it before quoting it.
+  `6_Proof_of_Concept_Prototype/prototype/` whose output file is committed. Re-run it before quoting it.
 
 A block diagram is held to the same standard as the equations. Every signal it
 draws must exist in the text under the same name, every block input must be
@@ -131,14 +131,21 @@ each drop their `(a)`/`(b)` label, since rule 13 applies to sub-panels only.
 
 ## Code and repository
 
+- The repository is organised by challenge deliverable, one folder each:
+  `1_IEEE_Research_Paper`, `2_System_Architecture`, `3_Detection_AI_Methodology`,
+  `4_Security_Threat_Model`, `5_Validation_Benchmarking`, `6_Proof_of_Concept_Prototype`.
+  The root README has one section per deliverable. Code lives once, in the
+  prototype folder; the other folders document and point to it. Paths to the
+  repository root, `data/` and the paper folder come from `cabinguard/paths.py`.
+
 - Heavy compute runs on the user's own machine: their PC (preferred since
   October 2026) or the Google Colab notebook
-  (`prototype/experiments/colab/CabinGuard_Colab.ipynb`), never in the Claude
+  (`6_Proof_of_Concept_Prototype/prototype/experiments/colab/CabinGuard_Colab.ipynb`), never in the Claude
   session: no training, evaluation, feature extraction or dataset download
   here. Follow `.claude/skills/colab-compute/SKILL.md`.
 
-- `prototype/` is the only Python package root. Scripts that produce paper
-  numbers live in `prototype/experiments/` and write to `prototype/results/`.
+- `6_Proof_of_Concept_Prototype/prototype/` is the only Python package root. Scripts that produce paper
+  numbers live in `6_Proof_of_Concept_Prototype/prototype/experiments/` and write to `6_Proof_of_Concept_Prototype/prototype/results/`.
 - Raw datasets are never committed. Loaders download them into
   `data/` (git-ignored) from the official source.
-- `python -m pytest prototype/tests` must pass before every push.
+- `python -m pytest 6_Proof_of_Concept_Prototype/prototype/tests` must pass before every push.
