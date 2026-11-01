@@ -4,6 +4,8 @@ A Python package that implements the whole chain, from sensor frames to
 authenticated CAN commands and the emergency message, plus a live dashboard
 that runs the same code for the jury.
 
+**Demo video:** [`media/cabinguard_demo.mp4`](media/cabinguard_demo.mp4) (64 s): the scripted syncope run on synthetic signals, from cruising at 100 km/h through the forged-frame attack, the alert, the eCall and the manoeuvre to the stop on the hard shoulder.
+
 ![Prototype dashboard during the minimum risk manoeuvre of a scripted seizure on synthetic signals](figures/dashboard_full.png)
 
 *The dashboard during the scripted seizure run, on synthetic signals (every

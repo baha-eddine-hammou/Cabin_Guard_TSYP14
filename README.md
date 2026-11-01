@@ -82,6 +82,8 @@ synthetic, webcam or ESP32 inputs.
 
 ![Prototype dashboard during the minimum risk manoeuvre of a scripted seizure on synthetic signals](6_Proof_of_Concept_Prototype/figures/dashboard_full.png)
 
+Demo video: [`6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4`](6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4) (64 s, scripted syncope run on synthetic signals).
+
 ## Quick start
 
 Python 3.11 or newer, from the repository root:
