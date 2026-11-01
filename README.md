@@ -21,9 +21,9 @@ Cardiac syncope and convulsive seizure versus normal driving · IEEE VTS TSYP14 
 <p align="center"><sub>Eye, head and seat channels are modelled in the composite episodes, so the fused numbers are an upper estimate until Phase 2 measures them. Every number names its evidence class; nothing synthetic is reported as clinical or vehicle performance.</sub></p>
 
 <p align="center">
-▶ <a href="6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4"><b>Watch the 64-second demo</b></a> &nbsp;·&nbsp;
-📄 <a href="1_IEEE_Research_Paper/IEEE_Research_Paper_CabinGuard.pdf"><b>Read the paper</b></a> &nbsp;·&nbsp;
-🚀 <a href="#quick-start"><b>Run it</b></a>
+<a href="6_Proof_of_Concept_Prototype/media/cabinguard_demo.mp4"><b>Watch the 64-second demo</b></a> &nbsp;·&nbsp;
+<a href="1_IEEE_Research_Paper/IEEE_Research_Paper_CabinGuard.pdf"><b>Read the paper</b></a> &nbsp;·&nbsp;
+<a href="#quick-start"><b>Run it</b></a>
 </p>
 
 ---
