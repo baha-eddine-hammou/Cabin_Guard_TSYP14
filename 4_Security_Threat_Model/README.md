@@ -6,6 +6,8 @@ the cellular network and the radio channel are untrusted.
 trust boundaries, STRIDE threats and controls, the `0x120` frame, the emergency
 message, and privacy engineering.
 
+![Trust boundaries: the cabin and edge host, the untrusted CAN bus, cellular and radio channels, and the gateway as the trusted boundary in front of the actuators](figures/trust_boundaries.png)
+
 ## Threats, controls and the test that exercises each
 
 | Threat | Control | Test |
@@ -22,6 +24,12 @@ message, and privacy engineering.
 
 All 140 fault-matrix runs (14 cases, 10 seeds, synthetic sensors) reached the
 required outcome; see [`5_Validation_Benchmarking`](../5_Validation_Benchmarking).
+
+![Bit layout of the 0x120 command frame: 32-bit payload, 8-bit freshness value, 24-bit MAC](figures/frame_0x120.png)
+
+The layout is read from `cabinguard_mrm.dbc`; the payload, the database file and the decoder are tested to agree bit for bit.
+
+*Figures in this folder are drawn by `6_Proof_of_Concept_Prototype/prototype/experiments/deliverable_figures.py` from the committed results and the paper's equations.*
 
 ## Privacy
 

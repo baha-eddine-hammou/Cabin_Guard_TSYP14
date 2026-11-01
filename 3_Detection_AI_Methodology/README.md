@@ -43,6 +43,16 @@ models from earlier experiments and are not used by the detector.
   than two sensors no manoeuvre may start (degraded mode 3). A camera that
   contradicts an upright, steering driver is distrusted for 10 s.
 
+![Posterior of an event against the evidence bound: one branch at its bound stays below the threshold, two agreeing branches exceed it](figures/fusion_bound.png)
+
+The admissible band in the figure is where one branch at its bound stays below Γ while two agreeing branches exceed it; c = 3 sits inside it.
+
+![Modelled clonic jerk train: 0.2 s discharges with silent periods growing towards 1 s](figures/clonic_jerk_train.png)
+
+No public recording measures seizure motion at a vehicle seat, so seizure tests also use this modelled jerk train (synthetic), added to held-out real driving at 0.1, 0.2 and 0.5 g; it is never used for training.
+
+*Figures in this folder are drawn by `6_Proof_of_Concept_Prototype/prototype/experiments/deliverable_figures.py` from the committed results and the paper's equations.*
+
 Code: `cabinguard/fusion.py` (branches and fusion), `cabinguard/watchdog.py`
 (decision rule, degraded modes, spoofing interlock), `cabinguard/config.py`
 (thresholds), all under

@@ -21,6 +21,20 @@ All files are under `6_Proof_of_Concept_Prototype/prototype/`. The paper
 quotes these numbers through `1_IEEE_Research_Paper/paper_numbers.tex`, which
 is generated from the same files.
 
+![Fused detector per configuration: false manoeuvres per hour, syncope and clinical-motion seizure detection](figures/fused_detector.png)
+
+Single branches either raise false starts (pulse alone, 3.92 per hour) or miss one event class; all four branches together start no manoeuvre in 22.2 h of real driving and detect both events. Rows that use the eye, head or seat channels are optimistic, since those channels are modelled.
+
+![Smoothing window sweep: median latency and syncope episodes detected for W = 0, 2, 4, 8 s](figures/w_sweep.png)
+
+![Motion branch: seizures detected by SeizeIT2 seizure type](figures/motion_by_seizure_type.png)
+
+The motion branch finds convulsive seizures and few others, which a neck sensor barely registers; that is why it votes together with the camera and the seat rather than alone.
+
+![Fault and attack matrix: 14 cases, every run reached the required outcome](figures/fault_matrix.png)
+
+*Figures in this folder are drawn by `6_Proof_of_Concept_Prototype/prototype/experiments/deliverable_figures.py` from the committed results and the paper's equations.*
+
 ## Reproduce
 
 Heavy jobs run on your own PC or in the Colab notebook
